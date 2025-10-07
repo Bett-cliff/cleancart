@@ -1,9 +1,10 @@
 "use client"
 
-import { useVendorAuth } from "@/hooks/use-vendor-auth"
+import { useVendorAuth } from "@/context/vendor-auth-context"
 import { useRouter, usePathname } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 // Pages that don't require authentication
 const publicPages = ['/vendor/login', '/vendor/register']
@@ -13,57 +14,104 @@ export default function VendorLayout({
 }: {
   children: React.ReactNode
 }) {
-  const auth = useVendorAuth()
+  const { isAuthenticated, isLoading } = useVendorAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const { toast } = useToast()
+  const [hasCheckedRedirect, setHasCheckedRedirect] = useState(false)
 
   const isPublicPage = publicPages.includes(pathname)
 
   useEffect(() => {
-    // If already authenticated and trying to access login/register, redirect to dashboard
-    if (!auth.isLoading && auth.isAuthenticated && isPublicPage) {
-      console.log('Already authenticated, redirecting to dashboard from:', pathname)
+    console.log('🔍 VendorLayout checking:', { 
+      isAuthenticated, 
+      isLoading, 
+      pathname, 
+      isPublicPage 
+    })
+
+    // Don't do anything while still loading
+    if (isLoading) {
+      console.log('⏳ VendorLayout: Still loading, waiting...')
+      return
+    }
+
+    // Prevent multiple redirects
+    if (hasCheckedRedirect) {
+      console.log('⏭️ VendorLayout: Already checked redirects, skipping...')
+      return
+    }
+
+    // If authenticated and trying to access public pages, redirect to dashboard
+    if (isAuthenticated && isPublicPage) {
+      console.log('✅ VendorLayout: Authenticated on public page, redirecting to dashboard')
+      setHasCheckedRedirect(true)
       router.push('/vendor/dashboard')
       return
     }
 
-    // Only redirect to login if not on a public page and not authenticated
-    if (!auth.isLoading && !auth.isAuthenticated && !isPublicPage) {
-      console.log('Not authenticated, redirecting to login from:', pathname)
+    // If not authenticated and trying to access protected pages, redirect to login
+    if (!isAuthenticated && !isPublicPage) {
+      console.log('❌ VendorLayout: Not authenticated, redirecting to login')
+      setHasCheckedRedirect(true)
+      toast({
+        title: "Authentication Required",
+        description: "Please login to access this page",
+        variant: "destructive",
+      })
       router.push('/vendor/login')
       return
     }
-  }, [auth.isAuthenticated, auth.isLoading, router, pathname, isPublicPage])
+
+    console.log('👍 VendorLayout: All checks passed, rendering content')
+    setHasCheckedRedirect(true)
+  }, [isAuthenticated, isLoading, router, pathname, isPublicPage, toast, hasCheckedRedirect])
+
+  // Reset redirect check when pathname changes
+  useEffect(() => {
+    setHasCheckedRedirect(false)
+  }, [pathname])
 
   // Show loading state
-  if (auth.isLoading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Checking authentication...</p>
+          <div className="w-16 h-16 bg-green-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <span className="text-white font-bold text-lg">CC</span>
+          </div>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-green-600" />
+          <p className="text-gray-600">Checking authentication...</p>
         </div>
       </div>
     )
   }
 
   // Allow public pages to render without authentication
-  if (isPublicPage) {
-    return <>{children}</>
+  if (isPublicPage && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
+        {children}
+      </div>
+    )
   }
 
   // Block protected pages if not authenticated
-  if (!auth.isAuthenticated) {
+  if (!isPublicPage && !isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Redirecting to login...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-green-600" />
+          <p className="text-gray-600">Redirecting to login...</p>
         </div>
       </div>
     )
   }
 
-  // Render protected pages if authenticated
-  return <>{children}</>
+  // Render protected pages if authenticated OR public pages if not authenticated
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
+      {children}
+    </div>
+  )
 }

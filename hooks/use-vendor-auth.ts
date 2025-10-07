@@ -1,83 +1,93 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { useVendorStore } from '@/contexts/vendor-context'
-
-interface Vendor {
-  id: string
-  email: string
-  name: string
-  businessName: string
-}
+import { useRouter } from 'next/navigation'
+import { useToast } from '@/hooks/use-toast'
+import { vendorApi, type Vendor } from '@/lib/vendor-api'
 
 export function useVendorAuth() {
   const [vendor, setVendor] = useState<Vendor | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const { validateVendor, getVendorByEmail } = useVendorStore()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const router = useRouter()
+  const { toast } = useToast()
 
   useEffect(() => {
     checkAuth()
   }, [])
 
-  const checkAuth = () => {
-    const token = localStorage.getItem('vendorToken')
-    const email = localStorage.getItem('vendorEmail')
-    const name = localStorage.getItem('vendorName')
-
-    if (token && email && name) {
-      setVendor({
-        id: '1',
-        email,
-        name,
-        businessName: name
-      })
+  const checkAuth = async () => {
+    try {
+      setIsLoading(true)
+      console.log('🔐 useVendorAuth: Checking authentication...')
+      
+      // Simple token existence check - no backend call needed
+      if (vendorApi.hasToken()) {
+        console.log('✅ useVendorAuth: Token exists, user is authenticated')
+        setIsAuthenticated(true)
+      } else {
+        console.log('❌ useVendorAuth: No token found')
+        setIsAuthenticated(false)
+      }
+    } catch (error) {
+      console.log('⚠️ useVendorAuth: Auth check failed:', error)
+      setIsAuthenticated(false)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
-  const login = (email: string, password: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const isValid = validateVendor(email, password)
-        
-        if (isValid) {
-          const vendorData = getVendorByEmail(email)
-          if (vendorData) {
-            localStorage.setItem('vendorToken', 'mock-vendor-token')
-            localStorage.setItem('vendorEmail', email)
-            localStorage.setItem('vendorName', vendorData.businessName)
-            setVendor({
-              id: vendorData.id,
-              email,
-              name: vendorData.businessName,
-              businessName: vendorData.businessName
-            })
-            resolve(true)
-          } else {
-            resolve(false)
-          }
-        } else {
-          resolve(false)
-        }
-      }, 1000)
-    })
+  const login = async (email: string, password: string) => {
+    try {
+      setIsLoading(true)
+      console.log('🔐 useVendorAuth: Starting login process...')
+      
+      const data = await vendorApi.login(email, password)
+      console.log('✅ useVendorAuth: Login API success, token received')
+      
+      vendorApi.setToken(data.token)
+      console.log('🔑 useVendorAuth: Token stored in vendorApi')
+      
+      if (data.vendor) {
+        console.log('📊 useVendorAuth: Using vendor data from login response:', data.vendor.businessName)
+        setVendor(data.vendor)
+        setIsAuthenticated(true)
+        console.log('🎯 useVendorAuth: Auth state updated - isAuthenticated: true')
+        return { success: true, vendor: data.vendor }
+      } else {
+        console.warn('⚠️ useVendorAuth: No vendor data in login response')
+        setIsAuthenticated(true)
+        return { success: true, vendor: null }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Login failed'
+      console.error('❌ useVendorAuth: Login failed:', message)
+      return { success: false, error: message }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const logout = () => {
-    localStorage.removeItem('vendorToken')
-    localStorage.removeItem('vendorEmail')
-    localStorage.removeItem('vendorName')
+    console.log('🚪 useVendorAuth: Logging out...')
+    vendorApi.clearToken()
     setVendor(null)
+    setIsAuthenticated(false)
+    
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out",
+    })
+    
+    router.push('/vendor/login')
   }
-
-  const isAuthenticated = !!vendor
 
   return {
     vendor,
-    isAuthenticated,
     isLoading,
+    isAuthenticated,
     login,
     logout,
-    checkAuth
+    checkAuth,
   }
 }

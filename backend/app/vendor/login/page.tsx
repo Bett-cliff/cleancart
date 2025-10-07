@@ -9,16 +9,15 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Mail, Lock, ArrowLeft, Building } from "lucide-react"
 import Link from "next/link"
-import { useVendorAuth } from "@/context/vendor-auth-context"
 
 export default function VendorLoginPage() {
-  const { login, isLoading } = useVendorAuth()
   const { toast } = useToast()
   const router = useRouter()
   const [formData, setFormData] = useState({
     email: "",
     password: ""
   })
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -29,44 +28,69 @@ export default function VendorLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Basic validation
-    if (!formData.email || !formData.password) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      })
-      return
-    }
+    setIsLoading(true)
 
-    const result = await login(formData.email, formData.password)
-    
-    if (result.success) {
-      toast({
-        title: "Login Successful!",
-        description: `Welcome back, ${result.vendor?.businessName || 'Vendor'}!`,
-      })
+    try {
+      console.log('🔐 Calling vendor login API...');
       
-      // 🔥 ADDED: Redirect to dashboard
-      console.log('🚀 Login successful, redirecting to dashboard...')
-      router.push('/vendor/dashboard')
-    } else {
+      const response = await fetch('http://localhost:5000/api/auth/vendor/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        }),
+      })
+
+      const result = await response.json()
+      
+      if (response.ok) {
+        console.log('✅ Vendor login successful:', result)
+        
+        // Store token and vendor data in localStorage
+        if (result.token) {
+          localStorage.setItem('vendorToken', result.token)
+          localStorage.setItem('vendorData', JSON.stringify(result.vendor))
+        }
+
+        toast({
+          title: "Login Successful!",
+          description: `Welcome back, ${result.vendor.businessName || 'Vendor'}!`,
+        })
+        
+        // Redirect to vendor dashboard
+        setTimeout(() => {
+          router.push("/vendor/dashboard")
+        }, 1000)
+      } else {
+        console.error('❌ Login failed:', result.error)
+        toast({
+          title: "Login Failed",
+          description: result.error || "Invalid email or password. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('❌ Login error:', error)
       toast({
-        title: "Login Failed",
-        description: result.error || "Invalid email or password",
+        title: "Connection Error",
+        description: "Cannot connect to server. Please check if the backend is running and try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">CC</span>
             </div>
             <span className="text-2xl font-bold text-gray-900">CleanCart</span>
@@ -79,7 +103,7 @@ export default function VendorLoginPage() {
           <CardHeader className="text-center pb-4">
             <div className="flex items-center justify-between">
               <Link href="/">
-                <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
+                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
                   <ArrowLeft className="w-4 h-4 mr-1" />
                   Back Home
                 </Button>
@@ -108,7 +132,7 @@ export default function VendorLoginPage() {
                     name="email"
                     type="email"
                     placeholder="business@email.com"
-                    className="pl-10 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                    className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                     value={formData.email}
                     onChange={handleChange}
                     required
@@ -129,7 +153,7 @@ export default function VendorLoginPage() {
                     name="password"
                     type="password"
                     placeholder="Enter your password"
-                    className="pl-10 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                    className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                     value={formData.password}
                     onChange={handleChange}
                     required
@@ -141,7 +165,7 @@ export default function VendorLoginPage() {
               {/* Submit Button */}
               <Button 
                 type="submit" 
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
                 disabled={isLoading}
                 size="lg"
               >
@@ -162,7 +186,7 @@ export default function VendorLoginPage() {
                 Don't have a vendor account?{" "}
                 <Link 
                   href="/vendor/register" 
-                  className="text-green-600 hover:text-green-700 font-medium transition-colors duration-200"
+                  className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
                 >
                   Apply here
                 </Link>
@@ -170,13 +194,13 @@ export default function VendorLoginPage() {
             </div>
 
             {/* Info Box */}
-            <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <Building className="w-5 h-5 text-green-500 mt-0.5" />
+                  <Building className="w-5 h-5 text-blue-500 mt-0.5" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-green-800">
+                  <p className="text-sm text-blue-800">
                     <strong>Note:</strong> Only approved vendors can access the dashboard. 
                     If your account is pending approval, you'll be able to login once approved.
                   </p>

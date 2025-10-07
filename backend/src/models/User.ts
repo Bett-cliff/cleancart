@@ -1,22 +1,59 @@
 import mongoose from 'mongoose';
 
-export interface IUser {
-  _id?: string;
-  name: string;
-  email: string;
-  password: string;
-  createdAt?: Date;
-}
-
 const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-}, {
-  timestamps: true
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  role: {
+    type: String,
+    enum: ['admin', 'vendor', 'customer'],
+    default: 'customer'
+  },
+  // Vendor-specific fields
+  businessName: {
+    type: String,
+    required: function() { return this.role === 'vendor'; }
+  },
+  phone: {
+    type: String
+  },
+  address: {
+    type: String
+  },
+  businessDescription: {
+    type: String,
+    default: ''
+  },
+  businessType: {
+    type: String,
+    default: 'general'
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
-export const User = mongoose.models.User || mongoose.model('User', userSchema);
-
-// In-memory fallback for development
-export const users: IUser[] = [];
+export default mongoose.model('User', userSchema);

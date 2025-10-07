@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Mail, Lock, Building, Phone, MapPin, ArrowLeft } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 
 export default function VendorRegisterPage() {
@@ -120,12 +121,12 @@ export default function VendorRegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">CC</span>
             </div>
             <span className="text-2xl font-bold text-gray-900">CleanCart</span>
@@ -138,7 +139,7 @@ export default function VendorRegisterPage() {
           <CardHeader className="text-center pb-4">
             <div className="flex items-center justify-between">
               <Link href="/vendor/login">
-                <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
+                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
                   <ArrowLeft className="w-4 h-4 mr-1" />
                   Back to Login
                 </Button>
@@ -167,7 +168,7 @@ export default function VendorRegisterPage() {
                       id="businessName"
                       name="businessName"
                       placeholder="Your business name"
-                      className="pl-10 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                      className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       value={formData.businessName}
                       onChange={handleChange}
                       required
@@ -188,7 +189,7 @@ export default function VendorRegisterPage() {
                       name="businessEmail"
                       type="email"
                       placeholder="business@email.com"
-                      className="pl-10 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                      className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       value={formData.businessEmail}
                       onChange={handleChange}
                       required
@@ -209,7 +210,7 @@ export default function VendorRegisterPage() {
                       name="phone"
                       type="tel"
                       placeholder="+254 700 000000"
-                      className="pl-10 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                      className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       value={formData.phone}
                       onChange={handleChange}
                       required
@@ -229,7 +230,7 @@ export default function VendorRegisterPage() {
                       id="address"
                       name="address"
                       placeholder="Nairobi, Kenya"
-                      className="pl-10 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                      className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       value={formData.address}
                       onChange={handleChange}
                       required
@@ -249,7 +250,7 @@ export default function VendorRegisterPage() {
                   name="description"
                   placeholder="Tell us about your business and the cleaning products/services you offer..."
                   rows={3}
-                  className="border-gray-300 focus:border-green-500 focus:ring-green-500 resize-none"
+                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 resize-none"
                   value={formData.description}
                   onChange={handleChange}
                   disabled={isLoading}
@@ -269,7 +270,7 @@ export default function VendorRegisterPage() {
                       name="password"
                       type="password"
                       placeholder="Create a password (min. 6 characters)"
-                      className="pl-10 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                      className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       value={formData.password}
                       onChange={handleChange}
                       required
@@ -290,7 +291,7 @@ export default function VendorRegisterPage() {
                       name="confirmPassword"
                       type="password"
                       placeholder="Confirm your password"
-                      className="pl-10 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                      className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       required
@@ -303,7 +304,7 @@ export default function VendorRegisterPage() {
               {/* Submit Button */}
               <Button 
                 type="submit" 
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
                 disabled={isLoading}
                 size="lg"
               >
@@ -324,7 +325,7 @@ export default function VendorRegisterPage() {
                 Already have an account?{" "}
                 <Link 
                   href="/vendor/login" 
-                  className="text-green-600 hover:text-green-700 font-medium transition-colors duration-200"
+                  className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
                 >
                   Sign in here
                 </Link>
@@ -332,15 +333,15 @@ export default function VendorRegisterPage() {
             </div>
 
             {/* Info Box */}
-            <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                  <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
                     <span className="text-white text-xs">i</span>
                   </div>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-green-800">
+                  <p className="text-sm text-blue-800">
                     <strong>Note:</strong> Your application will be reviewed by our team. 
                     You'll receive an email notification once your vendor account is approved. 
                     This process usually takes 1-2 business days.

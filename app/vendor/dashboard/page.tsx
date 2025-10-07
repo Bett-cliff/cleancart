@@ -1,490 +1,169 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react"
+import { useVendorAuth } from "@/hooks/use-vendor-auth"
+import { vendorApi } from "@/lib/vendor-api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Navbar } from "@/components/navbar"
-import { useToast } from "@/hooks/use-toast"
-import { HelpDesk } from "@/components/help-desk"
-import {
-  Package,
-  ShoppingCart,
-  Users,
-  DollarSign,
-  TrendingUp,
-  AlertTriangle,
-  Star,
-  Settings,
-  Truck,
-  Tag,
-  BarChart3,
-  Eye,
-  ArrowRight,
-  Calendar,
-  CreditCard,
-  MessageSquare,
-  MapPin,
-  FileText,
-  Shield,
-  Bell,
-  Heart,
-} from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
-import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Building, Package, Users, DollarSign, Loader2 } from "lucide-react"
 
-// Mock data
-const mockDashboardData = {
-  overview: {
-    totalSales: 1250000,
-    totalOrders: 156,
-    pendingOrders: 12,
-    totalProducts: 24,
-    lowStockItems: 3,
-    customerRating: 4.8,
-    revenueGrowth: 15.2,
-    activePromotions: 3
-  },
-  recentOrders: [
-    { id: "ORD-4567", customer: "John Kamau", amount: 4500, status: "pending", date: "2024-06-14" },
-    { id: "ORD-4566", customer: "Sarah Mwangi", amount: 12000, status: "delivered", date: "2024-06-13" },
-    { id: "ORD-4565", customer: "James Mutiso", amount: 7800, status: "processing", date: "2024-06-13" },
-    { id: "ORD-4564", customer: "Mary Wanjiku", amount: 3400, status: "delivered", date: "2024-06-12" },
-  ],
-  quickStats: [
-    { label: "Today's Revenue", value: "KSh 45,800", change: "+12%", trend: "up" },
-    { label: "This Week", value: "KSh 289,400", change: "+8%", trend: "up" },
-    { label: "This Month", value: "KSh 1.25M", change: "+15%", trend: "up" },
-    { label: "Active Customers", value: "1,248", change: "+5%", trend: "up" },
-  ]
+interface DashboardStats {
+  totalProducts: number
+  totalOrders: number
+  totalRevenue: number
+  pendingOrders: number
 }
 
-// Feature navigation cards
-const featureCards = [
-  {
-    title: "Product Management",
-    description: "Add, edit, and manage your products",
-    icon: Package,
-    href: "/vendor/products",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
-    status: "24 products"
-  },
-  {
-    title: "Order Management",
-    description: "Process and track customer orders",
-    icon: ShoppingCart,
-    href: "/vendor/orders",
-    color: "text-green-600",
-    bgColor: "bg-green-50",
-    status: "12 pending"
-  },
-  {
-    title: "Inventory",
-    description: "Manage stock levels and alerts",
-    icon: Package,
-    href: "/vendor/inventory",
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
-    status: "3 low stock"
-  },
-  {
-    title: "Marketing Tools",
-    description: "Create promotions and discounts",
-    icon: Tag,
-    href: "/vendor/marketing",
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
-    status: "3 active"
-  },
-  {
-    title: "Shipping & Logistics",
-    description: "Manage deliveries and couriers",
-    icon: Truck,
-    href: "/vendor/shipping",
-    color: "text-indigo-600",
-    bgColor: "bg-indigo-50",
-    status: "8 in transit"
-  },
-  {
-    title: "Customer Reviews",
-    description: "Respond to reviews and ratings",
-    icon: Star,
-    href: "/vendor/reviews",
-    color: "text-yellow-600",
-    bgColor: "bg-yellow-50",
-    status: "4.8 rating"
-  },
-  {
-    title: "Payment & Payouts",
-    description: "Track revenue and M-PESA payouts",
-    icon: DollarSign,
-    href: "/vendor/payouts",
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-50",
-    status: "KSh 289K"
-  },
-  {
-    title: "Vendor Profile",
-    description: "Manage business settings",
-    icon: Settings,
-    href: "/vendor/profile",
-    color: "text-gray-600",
-    bgColor: "bg-gray-50",
-    status: "Complete"
-  },
-  {
-    title: "Subscription",
-    description: "Manage your plan and billing",
-    icon: CreditCard,
-    href: "/vendor/subscription",
-    color: "text-red-600",
-    bgColor: "bg-red-50",
-    status: "Pro Plan"
-  },
-]
-
 export default function VendorDashboard() {
-  const { toast } = useToast()
-  const [dashboardData, setDashboardData] = useState(mockDashboardData)
+  const { vendor, logout } = useVendorAuth()
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const stats = [
-    {
-      title: "Total Revenue",
-      value: `KSh ${(dashboardData.overview.totalSales / 1000000).toFixed(2)}M`,
-      description: "All time sales",
-      icon: DollarSign,
-      color: "text-green-600",
-      bgColor: "bg-green-50"
-    },
-    {
-      title: "Total Orders",
-      value: dashboardData.overview.totalOrders.toString(),
-      description: "Completed orders",
-      icon: ShoppingCart,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50"
-    },
-    {
-      title: "Pending Orders",
-      value: dashboardData.overview.pendingOrders.toString(),
-      description: "Need processing",
-      icon: AlertTriangle,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50"
-    },
-    {
-      title: "Products",
-      value: dashboardData.overview.totalProducts.toString(),
-      description: "Active listings",
-      icon: Package,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50"
-    },
-    {
-      title: "Customer Rating",
-      value: dashboardData.overview.customerRating.toString(),
-      description: "Out of 5 stars",
-      icon: Star,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50"
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setIsLoading(true)
+        
+        // Fetch fresh dashboard data from database
+        const statsData = await vendorApi.getDashboardStats()
+        setStats(statsData)
+        
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  ]
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { label: "Pending", variant: "secondary" as const },
-      processing: { label: "Processing", variant: "default" as const },
-      delivered: { label: "Delivered", variant: "default" as const },
-      cancelled: { label: "Cancelled", variant: "destructive" as const }
-    }
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: "outline" as const }
-    return <Badge variant={config.variant}>{config.label}</Badge>
-  }
+    loadDashboardData()
+  }, [])
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-KE", {
-      style: "currency",
-      currency: "KES",
-      minimumFractionDigits: 0
-    }).format(amount)
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    })
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-green-600" />
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 p-6">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Vendor Dashboard</h1>
-            <p className="text-muted-foreground">
-              Welcome back! Here's what's happening with your business today.
+            <h1 className="text-3xl font-bold text-gray-900">Vendor Dashboard</h1>
+            <p className="text-gray-600 mt-2">
+              Welcome back, {vendor?.businessName || 'Vendor'}!
+            </p>
+            <p className="text-sm text-green-600 mt-1">
+              Status: <span className="font-medium capitalize">{vendor?.status}</span>
             </p>
           </div>
-          <div className="flex items-center gap-3 mt-4 sm:mt-0">
-            <Button variant="outline" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-            </Button>
-            <Button>
-              <TrendingUp className="w-4 h-4 mr-2" />
-              View Analytics
-            </Button>
-          </div>
+          <Button 
+            onClick={logout}
+            variant="outline"
+            className="text-red-600 border-red-200 hover:bg-red-50"
+          >
+            Logout
+          </Button>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {mockDashboardData.quickStats.map((stat, index) => (
-            <Card key={index}>
-              <CardContent className="p-4">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  {stat.label}
-                </p>
-                <div className="flex items-center justify-between">
-                  <p className="text-xl font-bold">{stat.value}</p>
-                  <Badge variant={stat.trend === "up" ? "default" : "destructive"}>
-                    {stat.change}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+              <Package className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.totalProducts || 0}</div>
+              <p className="text-xs text-muted-foreground">Active listings</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+              <Users className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.totalOrders || 0}</div>
+              <p className="text-xs text-muted-foreground">All time</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+              <DollarSign className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${stats?.totalRevenue || 0}</div>
+              <p className="text-xs text-muted-foreground">Lifetime earnings</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+              <Building className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.pendingOrders || 0}</div>
+              <p className="text-xs text-muted-foreground">Awaiting fulfillment</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Main Grid */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Column - Stats & Recent Orders */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {stats.map((stat, index) => {
-                const IconComponent = stat.icon
-                return (
-                  <Card key={index}>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground mb-1">
-                            {stat.title}
-                          </p>
-                          <p className="text-2xl font-bold">{stat.value}</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {stat.description}
-                          </p>
-                        </div>
-                        <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                          <IconComponent className={`w-6 h-6 ${stat.color}`} />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>Latest updates from your store</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-3 border rounded-lg">
+                  <p className="font-medium">New order received</p>
+                  <p className="text-sm text-gray-600">Order #1001 - 5 minutes ago</p>
+                </div>
+                <div className="p-3 border rounded-lg">
+                  <p className="font-medium">Product review submitted</p>
+                  <p className="text-sm text-gray-600">Floor Scrubber - 2 hours ago</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Recent Orders */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Orders</CardTitle>
-                <CardDescription>
-                  Latest customer orders that need your attention
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {mockDashboardData.recentOrders.map((order) => (
-                    <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                          <ShoppingCart className="w-5 h-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-semibold">{order.id}</p>
-                          <p className="text-sm text-muted-foreground">{order.customer}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{formatCurrency(order.amount)}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {getStatusBadge(order.status)}
-                          <p className="text-sm text-muted-foreground">{formatDate(order.date)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4">
-                  <Link href="/vendor/orders">
-                    <Button variant="outline" className="w-full">
-                      View All Orders
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Feature Navigation */}
-          <div className="space-y-6">
-            {/* Quick Access */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Access</CardTitle>
-                <CardDescription>
-                  Quickly navigate to different sections of your vendor portal
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  {featureCards.slice(0, 4).map((feature, index) => {
-                    const IconComponent = feature.icon
-                    return (
-                      <Link key={index} href={feature.href}>
-                        <Card className="cursor-pointer hover:shadow-md transition-shadow border-2 border-transparent hover:border-primary/20">
-                          <CardContent className="p-4 text-center">
-                            <div className={`w-12 h-12 ${feature.bgColor} rounded-lg flex items-center justify-center mx-auto mb-3`}>
-                              <IconComponent className={`w-6 h-6 ${feature.color}`} />
-                            </div>
-                            <h3 className="font-semibold text-sm mb-1">{feature.title}</h3>
-                            <Badge variant="secondary" className="text-xs">
-                              {feature.status}
-                            </Badge>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* All Features Grid */}
-            <Card>
-              <CardHeader>
-                <CardTitle>All Features</CardTitle>
-                <CardDescription>
-                  Complete access to all vendor tools and features
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {featureCards.map((feature, index) => {
-                    const IconComponent = feature.icon
-                    return (
-                      <Link key={index} href={feature.href}>
-                        <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group">
-                          <div className={`p-2 rounded-lg ${feature.bgColor} flex-shrink-0`}>
-                            <IconComponent className={`w-4 h-4 ${feature.color}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">
-                              {feature.title}
-                            </h3>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {feature.description}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {feature.status}
-                            </Badge>
-                            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                          </div>
-                        </div>
-                      </Link>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Support Card */}
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <MessageSquare className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Need Help?</h3>
-                    <p className="text-sm text-blue-700">Our support team is here for you</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Button variant="outline" className="w-full justify-start text-sm">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Documentation
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start text-sm">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Contact Support
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Manage your business</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button className="w-full justify-start" variant="outline">
+                  <Package className="mr-2 h-4 w-4" />
+                  Add New Product
+                </Button>
+                <Button className="w-full justify-start" variant="outline">
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  View Earnings Report
+                </Button>
+                <Button className="w-full justify-start" variant="outline">
+                  <Users className="mr-2 h-4 w-4" />
+                  Manage Orders
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="bg-muted/50 py-12 px-4 sm:px-6 lg:px-8 mt-12">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Image src="/cleancart-logo.png" alt="CleanCart Logo" width={32} height={32} className="w-8 h-8" />
-                <span className="text-xl font-bold">CleanCart</span>
-              </div>
-              <p className="text-muted-foreground">Kenya's premier eco-friendly cleaning supplies marketplace</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Shop</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>Household Cleaners</div>
-                <div>Industrial Equipment</div>
-                <div>Eco-Friendly Products</div>
-                <div>Waste Management</div>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Vendors</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>Become a Vendor</div>
-                <div>Vendor Dashboard</div>
-                <div>Pricing Plans</div>
-                <div>Support</div>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>About Us</div>
-                <div>Contact</div>
-                <div>Privacy Policy</div>
-                <div>Terms of Service</div>
-              </div>
-            </div>
-          </div>
-          <div className="border-t mt-8 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 CleanCart. All rights reserved. Built for a cleaner Kenya.</p>
-          </div>
-        </div>
-      </footer>
-
-      {/* Floating Help Desk Widget */}
-      <HelpDesk />
     </div>
   )
 }
