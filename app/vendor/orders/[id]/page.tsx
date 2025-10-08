@@ -1,564 +1,359 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Navbar } from "@/components/navbar"
-import { useToast } from "@/hooks/use-toast"
-import { HelpDesk } from "@/components/help-desk"
-import {
+import { 
   ArrowLeft,
-  Truck,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Package,
+  ShoppingCart,
   User,
   MapPin,
-  Phone,
-  Mail,
+  Truck,
+  CheckCircle,
+  Clock,
   Printer,
-  Download,
-  MessageCircle,
+  Mail,
+  Phone,
+  Package
 } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
-import { useParams } from "next/navigation"
-import { useState } from "react"
 
-// Mock order data - in real app, this would come from API
-const mockOrder = {
-  id: 'ORD-001',
+// Mock order details - in real app, fetch by ID
+const orderDetails = {
+  id: "ORD-0012",
   customer: {
-    name: 'John Mwangi',
-    email: 'john.mwangi@email.com',
-    phone: '+254712345678',
-    location: 'Nairobi'
+    name: "Sarah Johnson",
+    email: "sarah.j@email.com",
+    phone: "+254 712 345 678",
+    shippingAddress: {
+      street: "123 Main Street",
+      city: "Nairobi",
+      state: "Nairobi County",
+      zipCode: "00100",
+      country: "Kenya"
+    }
   },
-  products: [
-    { 
-      id: 1, 
-      name: 'Eco-Friendly All-Purpose Cleaner', 
-      quantity: 2, 
-      price: 850, 
-      image: '/placeholder-cleaner.jpg',
-      sku: 'EC-500-001',
-      category: 'Household Cleaners'
+  date: "2024-01-20 14:30",
+  status: "pending",
+  paymentStatus: "paid",
+  paymentMethod: "M-Pesa",
+  subtotal: 4000,
+  shipping: 250,
+  tax: 0,
+  total: 4250,
+  items: [
+    {
+      id: 1,
+      name: "Organic Lavender Soap",
+      price: 1200,
+      quantity: 2,
+      total: 2400,
+      image: "/api/placeholder/60/60"
     },
-    { 
-      id: 3, 
-      name: 'Natural Floor Cleaner', 
-      quantity: 1, 
-      price: 750, 
-      image: '/placeholder-floor-cleaner.jpg',
-      sku: 'NF-750-001',
-      category: 'Household Cleaners'
+    {
+      id: 2,
+      name: "Bamboo Toothbrush",
+      price: 800,
+      quantity: 1,
+      total: 800,
+      image: "/api/placeholder/60/60"
+    },
+    {
+      id: 3,
+      name: "Natural Deodorant",
+      price: 800,
+      quantity: 1,
+      total: 800,
+      image: "/api/placeholder/60/60"
     }
   ],
-  total: 2450,
-  subtotal: 2450,
-  shipping: 0,
-  tax: 0,
-  status: 'processing',
-  paymentStatus: 'paid',
-  paymentMethod: 'mpesa',
-  orderDate: '2024-06-15T10:30:00Z',
-  estimatedDelivery: '2024-06-17',
-  shippingAddress: {
-    street: '123 Main Street',
-    city: 'Nairobi',
-    county: 'Nairobi',
-    postalCode: '00100',
-    instructions: 'Please deliver before 5 PM'
+  shipping: {
+    method: "Standard Delivery",
+    cost: 250,
+    estimatedDelivery: "2024-01-25",
+    trackingNumber: null
   },
-  billingAddress: {
-    street: '123 Main Street',
-    city: 'Nairobi',
-    county: 'Nairobi',
-    postalCode: '00100'
-  },
-  notes: 'Customer requested eco-friendly packaging if possible',
-  trackingNumber: null
+  notes: "Please deliver before 5 PM"
+}
+
+const statusConfig = {
+  pending: { label: "Pending", color: "bg-yellow-100 text-yellow-800" },
+  processing: { label: "Processing", color: "bg-blue-100 text-blue-800" },
+  shipped: { label: "Shipped", color: "bg-purple-100 text-purple-800" },
+  delivered: { label: "Delivered", color: "bg-green-100 text-green-800" },
+  cancelled: { label: "Cancelled", color: "bg-red-100 text-red-800" }
 }
 
 export default function OrderDetailsPage() {
-  const { toast } = useToast()
   const params = useParams()
-  const orderId = params.id as string
-  const [order, setOrder] = useState(mockOrder)
-  const [isUpdating, setIsUpdating] = useState(false)
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      processing: { label: 'Processing', variant: 'secondary' as const, icon: Clock, color: 'text-blue-600 bg-blue-50' },
-      shipped: { label: 'Shipped', variant: 'default' as const, icon: Truck, color: 'text-orange-600 bg-orange-50' },
-      delivered: { label: 'Delivered', variant: 'default' as const, icon: CheckCircle, color: 'text-green-600 bg-green-50' },
-      cancelled: { label: 'Cancelled', variant: 'destructive' as const, icon: XCircle, color: 'text-red-600 bg-red-50' },
-    }
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const, icon: Clock, color: '' }
-    const IconComponent = config.icon
-    return (
-      <Badge variant={config.variant} className="flex items-center gap-1 text-sm py-1 px-3">
-        <IconComponent className="w-3 h-3" />
-        {config.label}
-      </Badge>
-    )
-  }
-
-  const getPaymentStatusBadge = (status: string) => {
-    const statusConfig = {
-      paid: { label: 'Paid', variant: 'default' as const, color: 'text-green-600 bg-green-50' },
-      pending: { label: 'Pending', variant: 'secondary' as const, color: 'text-yellow-600 bg-yellow-50' },
-      refunded: { label: 'Refunded', variant: 'destructive' as const, color: 'text-red-600 bg-red-50' },
-      failed: { label: 'Failed', variant: 'destructive' as const, color: 'text-red-600 bg-red-50' },
-    }
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const, color: '' }
-    return <Badge variant={config.variant} className={config.color}>{config.label}</Badge>
-  }
-
-  const updateOrderStatus = async (newStatus: string) => {
-    setIsUpdating(true)
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setOrder(prev => ({ ...prev, status: newStatus }))
-      
-      toast({
-        title: "Order Updated",
-        description: `Order status changed to ${newStatus}`,
-      })
-    } catch (error) {
-      toast({
-        title: "Update Failed",
-        description: "Failed to update order status",
-        variant: "destructive",
-      })
-    } finally {
-      setIsUpdating(false)
-    }
-  }
-
-  const addTrackingNumber = async (trackingNumber: string) => {
-    setIsUpdating(true)
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setOrder(prev => ({ ...prev, trackingNumber }))
-      
-      toast({
-        title: "Tracking Number Added",
-        description: "Tracking number has been updated",
-      })
-    } catch (error) {
-      toast({
-        title: "Update Failed",
-        description: "Failed to add tracking number",
-        variant: "destructive",
-      })
-    } finally {
-      setIsUpdating(false)
-    }
-  }
-
-  const printOrder = () => {
-    window.print()
-  }
+  const router = useRouter()
+  const order = orderDetails
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/vendor/orders">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Orders
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold">Order {order.id}</h1>
-              <p className="text-muted-foreground">
-                Placed on {new Date(order.orderDate).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 mt-4 sm:mt-0">
-            <Button variant="outline" onClick={printOrder}>
-              <Printer className="w-4 h-4 mr-2" />
-              Print
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <Link href="/vendor/orders">
+            <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Back to Orders
             </Button>
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Order {order.id}</h1>
+            <p className="text-gray-600 mt-1">Placed on {order.date}</p>
           </div>
         </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Order Status Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Status</CardTitle>
-                <CardDescription>
-                  Current order status and next actions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    {getStatusBadge(order.status)}
-                    {getPaymentStatusBadge(order.paymentStatus)}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">KSh {order.total.toLocaleString()}</p>
-                    <p className="text-sm text-muted-foreground">Total Amount</p>
-                  </div>
-                </div>
-
-                {/* Status Actions */}
-                <div className="space-y-3">
-                  {order.status === 'processing' && (
-                    <>
-                      <Button 
-                        className="w-full" 
-                        onClick={() => updateOrderStatus('shipped')}
-                        disabled={isUpdating}
-                      >
-                        <Truck className="w-4 h-4 mr-2" />
-                        Mark as Shipped
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={() => updateOrderStatus('cancelled')}
-                        disabled={isUpdating}
-                      >
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Cancel Order
-                      </Button>
-                    </>
-                  )}
-
-                  {order.status === 'shipped' && (
-                    <Button 
-                      className="w-full"
-                      onClick={() => updateOrderStatus('delivered')}
-                      disabled={isUpdating}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Mark as Delivered
-                    </Button>
-                  )}
-
-                  {/* Tracking Number Input */}
-                  {order.status === 'shipped' && !order.trackingNumber && (
-                    <div className="p-4 border rounded-lg bg-muted/30">
-                      <label className="block text-sm font-medium mb-2">
-                        Add Tracking Number
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Enter tracking number"
-                          className="flex-1 border rounded-lg px-3 py-2 text-sm"
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              addTrackingNumber((e.target as HTMLInputElement).value)
-                            }
-                          }}
-                        />
-                        <Button 
-                          size="sm"
-                          onClick={() => {
-                            const input = document.querySelector('input[type="text"]') as HTMLInputElement
-                            if (input.value) {
-                              addTrackingNumber(input.value)
-                            }
-                          }}
-                        >
-                          Add
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {order.trackingNumber && (
-                    <div className="p-4 border rounded-lg bg-green-50">
-                      <p className="font-medium text-green-800">Tracking Number</p>
-                      <p className="text-green-700">{order.trackingNumber}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Products Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Items</CardTitle>
-                <CardDescription>
-                  Products included in this order
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {order.products.map((product, index) => (
-                    <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
-                      <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Package className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm mb-1">{product.name}</h4>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>SKU: {product.sku}</span>
-                          <span>Category: {product.category}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">KSh {product.price.toLocaleString()}</p>
-                        <p className="text-sm text-muted-foreground">Qty: {product.quantity}</p>
-                        <p className="font-bold text-primary">
-                          KSh {(product.quantity * product.price).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Order Summary */}
-                <div className="mt-6 pt-6 border-t">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span>KSh {order.subtotal.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Shipping</span>
-                      <span>KSh {order.shipping.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tax</span>
-                      <span>KSh {order.tax.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                      <span>Total</span>
-                      <span>KSh {order.total.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Customer Notes */}
-            {order.notes && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order Notes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="p-4 bg-yellow-50 rounded-lg">
-                    <p className="text-sm text-yellow-800">{order.notes}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Customer Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Customer Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">{order.customer.name}</p>
-                    <p className="text-sm text-muted-foreground">Customer</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">{order.customer.email}</p>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">{order.customer.phone}</p>
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">{order.customer.location}</p>
-                    <p className="text-sm text-muted-foreground">Location</p>
-                  </div>
-                </div>
-                <Button variant="outline" className="w-full">
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Contact Customer
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Shipping Address */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Shipping Address</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <p className="font-medium">{order.customer.name}</p>
-                  <p>{order.shippingAddress.street}</p>
-                  <p>{order.shippingAddress.city}, {order.shippingAddress.county}</p>
-                  <p>{order.shippingAddress.postalCode}</p>
-                  {order.shippingAddress.instructions && (
-                    <div className="mt-3 p-2 bg-blue-50 rounded">
-                      <p className="text-xs text-blue-700">
-                        <strong>Delivery Instructions:</strong> {order.shippingAddress.instructions}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Order Timeline */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Timeline</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <div className="w-0.5 h-8 bg-green-500 mt-1"></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">Order Placed</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(order.orderDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-3 h-3 rounded-full ${
-                        order.status !== 'processing' ? 'bg-green-500' : 'bg-gray-300'
-                      }`}></div>
-                      <div className={`w-0.5 h-8 mt-1 ${
-                        order.status === 'shipped' || order.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'
-                      }`}></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">Order Confirmed</p>
-                      <p className="text-xs text-muted-foreground">
-                        {order.status !== 'processing' ? 'Confirmed' : 'Pending'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-3 h-3 rounded-full ${
-                        order.status === 'shipped' || order.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'
-                      }`}></div>
-                      <div className={`w-0.5 h-8 mt-1 ${
-                        order.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'
-                      }`}></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">Shipped</p>
-                      <p className="text-xs text-muted-foreground">
-                        {order.status === 'shipped' || order.status === 'delivered' ? 'Shipped' : 'Pending'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-3 h-3 rounded-full ${
-                        order.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'
-                      }`}></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">Delivered</p>
-                      <p className="text-xs text-muted-foreground">
-                        {order.status === 'delivered' ? 'Delivered' : 'Pending'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        
+        <div className="flex items-center gap-3">
+          <Button variant="outline" className="flex items-center gap-2">
+            <Printer className="w-4 h-4" />
+            Print
+          </Button>
+          <Button className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
+            <Truck className="w-4 h-4" />
+            Update Status
+          </Button>
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-muted/50 py-12 px-4 sm:px-6 lg:px-8 mt-12">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Image src="/cleancart-logo.png" alt="CleanCart Logo" width={32} height={32} className="w-8 h-8" />
-                <span className="text-xl font-bold">CleanCart</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Order Status Timeline */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Order Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusConfig[order.status as keyof typeof statusConfig]?.color}`}>
+                    {statusConfig[order.status as keyof typeof statusConfig]?.label}
+                  </span>
+                </div>
+                <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                  {order.paymentStatus === 'paid' ? 'Paid' : 'Payment Pending'}
+                </Badge>
               </div>
-              <p className="text-muted-foreground">Kenya's premier eco-friendly cleaning supplies marketplace</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Shop</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>Household Cleaners</div>
-                <div>Industrial Equipment</div>
-                <div>Eco-Friendly Products</div>
-                <div>Waste Management</div>
+              
+              {/* Status Timeline */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Order Placed</p>
+                    <p className="text-sm text-gray-500">{order.date}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    order.status !== 'pending' ? 'bg-green-100' : 'bg-gray-100'
+                  }`}>
+                    {order.status !== 'pending' ? (
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Order Confirmed</p>
+                    <p className="text-sm text-gray-500">
+                      {order.status !== 'pending' ? 'Confirmed on 2024-01-20' : 'Pending confirmation'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    ['shipped', 'delivered'].includes(order.status) ? 'bg-green-100' : 'bg-gray-100'
+                  }`}>
+                    {['shipped', 'delivered'].includes(order.status) ? (
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Shipped</p>
+                    <p className="text-sm text-gray-500">
+                      {order.status === 'shipped' ? `Shipped on ${order.shipping.estimatedDelivery}` :
+                       order.status === 'delivered' ? 'Delivered successfully' :
+                       'Preparing for shipment'}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Vendors</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>Become a Vendor</div>
-                <div>Vendor Dashboard</div>
-                <div>Pricing Plans</div>
-                <div>Support</div>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>About Us</div>
-                <div>Contact</div>
-                <div>Privacy Policy</div>
-                <div>Terms of Service</div>
-              </div>
-            </div>
-          </div>
-          <div className="border-t mt-8 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 CleanCart. All rights reserved. Built for a cleaner Kenya.</p>
-          </div>
-        </div>
-      </footer>
+            </CardContent>
+          </Card>
 
-      {/* Floating Help Desk Widget */}
-      <HelpDesk />
+          {/* Order Items */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5" />
+                Order Items
+              </CardTitle>
+              <CardDescription>
+                {order.items.length} items in this order
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {order.items.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <Package className="w-6 h-6 text-gray-500" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">{item.name}</h4>
+                        <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">KSh {item.total.toLocaleString()}</p>
+                      <p className="text-sm text-gray-500">KSh {item.price} each</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Order Summary */}
+              <div className="border-t mt-6 pt-6 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="text-gray-900">KSh {order.subtotal.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Shipping</span>
+                  <span className="text-gray-900">KSh {order.shipping.cost.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Tax</span>
+                  <span className="text-gray-900">KSh {order.tax.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-lg font-semibold border-t pt-3">
+                  <span className="text-gray-900">Total</span>
+                  <span className="text-gray-900">KSh {order.total.toLocaleString()}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Customer Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Customer
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="font-medium text-gray-900">{order.customer.name}</p>
+                <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                  <Mail className="w-4 h-4" />
+                  {order.customer.email}
+                </div>
+                <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                  <Phone className="w-4 h-4" />
+                  {order.customer.phone}
+                </div>
+              </div>
+              
+              <Button variant="outline" className="w-full">
+                <Mail className="w-4 h-4 mr-2" />
+                Send Message
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Shipping Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Shipping Address
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <p className="font-medium text-gray-900">{order.customer.name}</p>
+                <p className="text-gray-600">{order.customer.shippingAddress.street}</p>
+                <p className="text-gray-600">
+                  {order.customer.shippingAddress.city}, {order.customer.shippingAddress.state} {order.customer.shippingAddress.zipCode}
+                </p>
+                <p className="text-gray-600">{order.customer.shippingAddress.country}</p>
+              </div>
+              
+              {order.notes && (
+                <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Customer Note:</strong> {order.notes}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Shipping Method */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="w-5 h-5" />
+                Shipping Method
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="font-medium text-gray-900">{order.shipping.method}</p>
+                <p className="text-sm text-gray-600">Cost: KSh {order.shipping.cost.toLocaleString()}</p>
+                <p className="text-sm text-gray-600">
+                  Estimated delivery: {order.shipping.estimatedDelivery}
+                </p>
+              </div>
+              
+              {!order.shipping.trackingNumber && (
+                <Button variant="outline" className="w-full mt-4">
+                  <Truck className="w-4 h-4 mr-2" />
+                  Add Tracking
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Payment Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Method:</span>
+                <span className="text-sm font-medium">{order.paymentMethod}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Status:</span>
+                <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                  {order.paymentStatus}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

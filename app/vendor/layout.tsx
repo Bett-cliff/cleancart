@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { VendorNavbar } from "@/components/vendor-navbar"
 
 // Pages that don't require authentication
 const publicPages = ['/vendor/login', '/vendor/register']
@@ -108,10 +109,16 @@ export default function VendorLayout({
     )
   }
 
-  // Render protected pages if authenticated OR public pages if not authenticated
+  // Render protected pages with navbar if authenticated OR public pages if not authenticated
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
-      {children}
+      {/* Navbar only shows on authenticated pages */}
+      {!isPublicPage && isAuthenticated && <VendorNavbar />}
+      
+      {/* Main content */}
+      <main className={!isPublicPage ? "max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8" : ""}>
+        {children}
+      </main>
     </div>
   )
 }

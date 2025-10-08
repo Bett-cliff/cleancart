@@ -1,633 +1,706 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Navbar } from "@/components/navbar"
-import { useToast } from "@/hooks/use-toast"
-import { HelpDesk } from "@/components/help-desk"
-import {
-  CheckCircle2,
+import { 
   Crown,
-  Star,
-  Zap,
-  CreditCard,
+  CheckCircle,
+  XCircle,
   Calendar,
+  CreditCard,
   Download,
   ArrowRight,
-  CrownIcon as CrownIconLucide,
-  Sparkles,
-  Shield,
-  BarChart3,
+  Zap,
+  Star,
   Users,
   Package,
-  MessageCircle,
+  BarChart3,
+  Shield,
+  Mail,
+  Phone,
+  HelpCircle
 } from "lucide-react"
-import Image from "next/image"
-import { useState } from "react"
 
 // Mock subscription data
-const mockSubscriptionData = {
+const subscriptionData = {
   currentPlan: {
-    id: 'pro',
-    name: 'Pro Plan',
-    price: 2500,
-    billingCycle: 'monthly',
-    status: 'active',
-    currentPeriodStart: '2024-06-01',
-    currentPeriodEnd: '2024-07-01',
+    name: "Pro Plan",
+    price: 2999,
+    billingCycle: "monthly",
+    status: "active",
+    nextBillingDate: "2024-02-20",
     features: [
-      'Up to 100 products',
-      'Advanced analytics',
-      'Priority support',
-      'Marketing tools',
-      'Bulk upload'
+      "Up to 100 products",
+      "Advanced analytics",
+      "Priority support",
+      "Custom domain",
+      "API access"
     ],
     limits: {
       products: 100,
-      storage: '10GB',
-      staffAccounts: 3,
-      analytics: true,
-      support: 'priority'
+      storage: 10, // GB
+      staffAccounts: 3
+    },
+    usage: {
+      products: 24,
+      storage: 2.3,
+      staffAccounts: 1
     }
   },
   plans: [
     {
-      id: 'free',
-      name: 'Free Plan',
-      price: 0,
-      description: 'Perfect for getting started',
+      id: "starter",
+      name: "Starter",
+      price: 999,
+      billingCycle: "monthly",
       popular: false,
+      description: "Perfect for small businesses starting out",
       features: [
-        'Up to 10 products',
-        'Basic storefront',
-        'M-PESA payments',
-        'Email support',
-        'Basic analytics'
+        "Up to 25 products",
+        "Basic analytics",
+        "Email support",
+        "Standard features"
       ],
       limits: {
-        products: 10,
-        storage: '1GB',
-        staffAccounts: 1,
-        analytics: false,
-        support: 'email'
-      },
-      buttonText: 'Current Plan',
-      highlighted: false
+        products: 25,
+        storage: 2,
+        staffAccounts: 1
+      }
     },
     {
-      id: 'basic',
-      name: 'Basic Plan',
-      price: 1000,
-      description: 'For growing businesses',
-      popular: false,
-      features: [
-        'Up to 50 products',
-        'Advanced storefront',
-        'Bulk product upload',
-        'Email & chat support',
-        'Sales analytics'
-      ],
-      limits: {
-        products: 50,
-        storage: '5GB',
-        staffAccounts: 2,
-        analytics: true,
-        support: 'chat'
-      },
-      buttonText: 'Upgrade',
-      highlighted: false
-    },
-    {
-      id: 'pro',
-      name: 'Pro Plan',
-      price: 2500,
-      description: 'Most popular for serious sellers',
+      id: "pro",
+      name: "Pro",
+      price: 2999,
+      billingCycle: "monthly",
       popular: true,
+      description: "Ideal for growing businesses",
       features: [
-        'Up to 100 products',
-        'Advanced analytics',
-        'Priority support',
-        'Marketing tools',
-        'Bulk upload',
-        'API access'
+        "Up to 100 products",
+        "Advanced analytics",
+        "Priority support",
+        "Custom domain",
+        "API access"
       ],
       limits: {
         products: 100,
-        storage: '10GB',
-        staffAccounts: 3,
-        analytics: true,
-        support: 'priority'
-      },
-      buttonText: 'Current Plan',
-      highlighted: true
+        storage: 10,
+        staffAccounts: 3
+      }
     },
     {
-      id: 'premium',
-      name: 'Premium Plan',
-      price: 5000,
-      description: 'Everything you need to scale',
+      id: "enterprise",
+      name: "Enterprise",
+      price: 7999,
+      billingCycle: "monthly",
       popular: false,
+      description: "For large-scale operations",
       features: [
-        'Unlimited products',
-        'Advanced analytics & reports',
-        '24/7 phone support',
-        'Custom branding',
-        'API access',
-        'Dedicated account manager'
+        "Unlimited products",
+        "Advanced analytics +",
+        "24/7 phone support",
+        "Multiple custom domains",
+        "Advanced API access",
+        "Custom integrations"
       ],
       limits: {
-        products: 9999,
-        storage: '50GB',
-        staffAccounts: 10,
-        analytics: true,
-        support: 'phone'
-      },
-      buttonText: 'Upgrade',
-      highlighted: false
+        products: 999,
+        storage: 50,
+        staffAccounts: 10
+      }
     }
   ],
   billingHistory: [
     {
-      id: 'INV-001',
-      date: '2024-06-01',
-      plan: 'Pro Plan',
-      amount: 2500,
-      status: 'paid',
-      downloadUrl: '#'
+      id: "INV-0012",
+      date: "2024-01-20",
+      amount: 2999,
+      status: "paid",
+      description: "Pro Plan - Monthly"
     },
     {
-      id: 'INV-002',
-      date: '2024-05-01',
-      plan: 'Pro Plan',
-      amount: 2500,
-      status: 'paid',
-      downloadUrl: '#'
+      id: "INV-0011",
+      date: "2023-12-20",
+      amount: 2999,
+      status: "paid",
+      description: "Pro Plan - Monthly"
     },
     {
-      id: 'INV-003',
-      date: '2024-04-01',
-      plan: 'Basic Plan',
-      amount: 1000,
-      status: 'paid',
-      downloadUrl: '#'
+      id: "INV-0010",
+      date: "2023-11-20",
+      amount: 2999,
+      status: "paid",
+      description: "Pro Plan - Monthly"
+    },
+    {
+      id: "INV-0009",
+      date: "2023-10-20",
+      amount: 999,
+      status: "paid",
+      description: "Starter Plan - Monthly"
     }
   ],
-  usage: {
-    products: {
-      used: 24,
-      limit: 100,
-      percentage: 24
-    },
-    storage: {
-      used: 2.1,
-      limit: 10,
-      percentage: 21
-    },
-    staffAccounts: {
-      used: 1,
-      limit: 3,
-      percentage: 33
-    }
+  paymentMethod: {
+    type: "mpesa",
+    lastFour: "2547",
+    expiry: "12/2025",
+    isDefault: true
   }
 }
 
-export default function VendorSubscriptionPage() {
-  const { toast } = useToast()
-  const [subscription, setSubscription] = useState(mockSubscriptionData)
-  const [isProcessing, setIsProcessing] = useState(false)
+export default function SubscriptionPage() {
+  const [activeTab, setActiveTab] = useState("overview")
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
-  const handleUpgrade = async (planId: string) => {
-    if (planId === subscription.currentPlan.id) {
-      toast({
-        title: "Already on this plan",
-        description: "You are already subscribed to this plan.",
-      })
-      return
-    }
+  const tabs = [
+    { id: "overview", label: "Plan Overview" },
+    { id: "billing", label: "Billing History" },
+    { id: "payment", label: "Payment Methods" }
+  ]
 
-    setIsProcessing(true)
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      const selectedPlan = subscription.plans.find(p => p.id === planId)
-      setSubscription(prev => ({
-        ...prev,
-        currentPlan: {
-          ...selectedPlan!,
-          status: 'active',
-          currentPeriodStart: new Date().toISOString().split('T')[0],
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        }
-      }))
-
-      toast({
-        title: "Plan Updated!",
-        description: `You have successfully upgraded to the ${selectedPlan?.name}.`,
-      })
-    } catch (error) {
-      toast({
-        title: "Upgrade Failed",
-        description: "Please try again or contact support.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsProcessing(false)
-    }
+  const formatCurrency = (amount: number) => {
+    return `KSh ${amount.toLocaleString()}`
   }
 
-  const handleCancel = async () => {
-    if (!confirm("Are you sure you want to cancel your subscription? You'll lose access to premium features at the end of your billing period.")) {
-      return
-    }
-
-    setIsProcessing(true)
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      setSubscription(prev => ({
-        ...prev,
-        currentPlan: {
-          ...prev.currentPlan,
-          status: 'cancelled'
-        }
-      }))
-
-      toast({
-        title: "Subscription Cancelled",
-        description: "Your subscription will remain active until the end of the billing period.",
-      })
-    } catch (error) {
-      toast({
-        title: "Cancellation Failed",
-        description: "Please try again or contact support.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsProcessing(false)
-    }
+  const calculateUsagePercentage = (used: number, total: number) => {
+    return Math.min(Math.round((used / total) * 100), 100)
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+  const getUsageColor = (percentage: number) => {
+    if (percentage < 70) return "bg-green-500"
+    if (percentage < 90) return "bg-yellow-500"
+    return "bg-red-500"
   }
 
-  const getDaysUntilRenewal = () => {
-    const endDate = new Date(subscription.currentPlan.currentPeriodEnd)
-    const today = new Date()
-    const diffTime = endDate.getTime() - today.getTime()
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  }
+  const { currentPlan, plans, billingHistory, paymentMethod } = subscriptionData
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Subscription Management</h1>
-            <p className="text-muted-foreground">
-              Manage your subscription plan and billing
-            </p>
-          </div>
-          <div className="flex items-center gap-3 mt-4 sm:mt-0">
-            <Button variant="outline" className="flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              Export Invoices
-            </Button>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Subscription</h1>
+          <p className="text-gray-600 mt-1">Manage your plan, billing, and payments</p>
         </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" className="flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            Invoice
+          </Button>
+          <Button className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
+            <CreditCard className="w-4 h-4" />
+            Update Payment
+          </Button>
+        </div>
+      </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Current Plan Card */}
-            <Card className="relative">
-              {subscription.currentPlan.status === 'active' && (
-                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-primary text-primary-foreground flex items-center gap-1">
-                    <Crown className="w-3 h-3" />
-                    Active Plan
-                  </Badge>
+      {/* Navigation Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === tab.id
+                  ? "border-green-500 text-green-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Overview Tab */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          {/* Current Plan Card */}
+          <Card className="border-green-200 bg-green-50">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-green-900">
+                    <Crown className="w-6 h-6" />
+                    Current Plan: {currentPlan.name}
+                  </CardTitle>
+                  <CardDescription className="text-green-700">
+                    You're on the {currentPlan.name} billed monthly
+                  </CardDescription>
                 </div>
-              )}
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {subscription.currentPlan.name}
-                  {subscription.currentPlan.popular && (
-                    <Sparkles className="w-5 h-5 text-yellow-500" />
-                  )}
+                <Badge className="bg-green-600 text-white">
+                  Active
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-900">
+                    {formatCurrency(currentPlan.price)}
+                  </div>
+                  <p className="text-sm text-green-700">per month</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-900">
+                    {currentPlan.nextBillingDate}
+                  </div>
+                  <p className="text-sm text-green-700">Next billing</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-900">
+                    {currentPlan.usage.products}/{currentPlan.limits.products}
+                  </div>
+                  <p className="text-sm text-green-700">Products used</p>
+                </div>
+                <div className="text-center">
+                  <Button 
+                    variant="outline" 
+                    className="border-green-300 text-green-700 hover:bg-green-100"
+                    onClick={() => setShowUpgradeModal(true)}
+                  >
+                    Upgrade Plan
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Usage Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Products Usage */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Package className="w-4 h-4" />
+                  Products
                 </CardTitle>
-                <CardDescription>
-                  {subscription.currentPlan.description}
-                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-6">
-                  {/* Plan Details */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-3xl font-bold text-primary">
-                        KSh {subscription.currentPlan.price.toLocaleString()}
-                        <span className="text-sm font-normal text-muted-foreground">/month</span>
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Billed {subscription.currentPlan.billingCycle}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">Renews in {getDaysUntilRenewal()} days</p>
-                      <p className="text-sm text-muted-foreground">
-                        Next billing: {formatDate(subscription.currentPlan.currentPeriodEnd)}
-                      </p>
-                    </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Used</span>
+                    <span className="font-medium">
+                      {currentPlan.usage.products} / {currentPlan.limits.products}
+                    </span>
                   </div>
-
-                  {/* Usage Stats */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-4 border rounded-lg">
-                      <p className="text-2xl font-bold text-primary">
-                        {subscription.usage.products.used}/{subscription.usage.products.limit}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Products</p>
-                      <div className="w-full bg-muted rounded-full h-2 mt-2">
-                        <div 
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${subscription.usage.products.percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="text-center p-4 border rounded-lg">
-                      <p className="text-2xl font-bold text-primary">
-                        {subscription.usage.storage.used}GB/{subscription.usage.storage.limit}GB
-                      </p>
-                      <p className="text-sm text-muted-foreground">Storage</p>
-                      <div className="w-full bg-muted rounded-full h-2 mt-2">
-                        <div 
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${subscription.usage.storage.percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="text-center p-4 border rounded-lg">
-                      <p className="text-2xl font-bold text-primary">
-                        {subscription.usage.staffAccounts.used}/{subscription.usage.staffAccounts.limit}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Staff Accounts</p>
-                      <div className="w-full bg-muted rounded-full h-2 mt-2">
-                        <div 
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${subscription.usage.staffAccounts.percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${getUsageColor(
+                        calculateUsagePercentage(currentPlan.usage.products, currentPlan.limits.products)
+                      )}`}
+                      style={{ 
+                        width: `${calculateUsagePercentage(currentPlan.usage.products, currentPlan.limits.products)}%` 
+                      }}
+                    />
                   </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3">
-                    <Button 
-                      variant="outline"
-                      onClick={handleCancel}
-                      disabled={isProcessing || subscription.currentPlan.id === 'free'}
-                    >
-                      Cancel Subscription
-                    </Button>
-                    <Button variant="outline">
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Update Payment Method
-                    </Button>
-                  </div>
+                  <p className="text-xs text-gray-500">
+                    {currentPlan.limits.products - currentPlan.usage.products} products remaining
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Available Plans */}
-            <div>
-              <h2 className="text-2xl font-bold mb-6">Available Plans</h2>
-              <div className="grid md:grid-cols-2 gap-6">
-                {subscription.plans
-                  .filter(plan => plan.id !== subscription.currentPlan.id)
-                  .map((plan) => (
+            {/* Storage Usage */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <BarChart3 className="w-4 h-4" />
+                  Storage
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Used</span>
+                    <span className="font-medium">
+                      {currentPlan.usage.storage}GB / {currentPlan.limits.storage}GB
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${getUsageColor(
+                        calculateUsagePercentage(currentPlan.usage.storage, currentPlan.limits.storage)
+                      )}`}
+                      style={{ 
+                        width: `${calculateUsagePercentage(currentPlan.usage.storage, currentPlan.limits.storage)}%` 
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {currentPlan.limits.storage - currentPlan.usage.storage}GB storage available
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Staff Accounts */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Users className="w-4 h-4" />
+                  Staff Accounts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Used</span>
+                    <span className="font-medium">
+                      {currentPlan.usage.staffAccounts} / {currentPlan.limits.staffAccounts}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${getUsageColor(
+                        calculateUsagePercentage(currentPlan.usage.staffAccounts, currentPlan.limits.staffAccounts)
+                      )}`}
+                      style={{ 
+                        width: `${calculateUsagePercentage(currentPlan.usage.staffAccounts, currentPlan.limits.staffAccounts)}%` 
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {currentPlan.limits.staffAccounts - currentPlan.usage.staffAccounts} accounts available
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Plan Features */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Plan Features</CardTitle>
+              <CardDescription>
+                Features included in your current plan
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {currentPlan.features.map((feature, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="text-gray-700">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Available Plans */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Plans</CardTitle>
+              <CardDescription>
+                Choose the plan that fits your business needs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {plans.map((plan) => (
                   <Card 
                     key={plan.id} 
-                    className={`relative hover:shadow-lg transition-shadow ${
-                      plan.highlighted ? 'border-primary ring-2 ring-primary/20' : ''
+                    className={`relative border-2 ${
+                      plan.popular 
+                        ? 'border-green-300 bg-green-50' 
+                        : plan.id === currentPlan.name.toLowerCase()
+                        ? 'border-blue-300 bg-blue-50'
+                        : 'border-gray-200'
                     }`}
                   >
                     {plan.popular && (
                       <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <Badge className="bg-yellow-500 text-yellow-950 flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-current" />
+                        <Badge className="bg-green-600 text-white">
+                          <Star className="w-3 h-3 mr-1" />
                           Most Popular
+                        </Badge>
+                      </div>
+                    )}
+                    {plan.id === currentPlan.name.toLowerCase() && (
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                        <Badge className="bg-blue-600 text-white">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Current Plan
                         </Badge>
                       </div>
                     )}
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
+                        {plan.id === 'enterprise' && <Zap className="w-5 h-5 text-yellow-600" />}
+                        {plan.id === 'pro' && <Crown className="w-5 h-5 text-purple-600" />}
+                        {plan.id === 'starter' && <Package className="w-5 h-5 text-blue-600" />}
                         {plan.name}
-                        {plan.id === 'premium' && <Crown className="w-5 h-5 text-yellow-500" />}
                       </CardTitle>
                       <CardDescription>{plan.description}</CardDescription>
+                      <div className="mt-4">
+                        <span className="text-3xl font-bold text-gray-900">
+                          {formatCurrency(plan.price)}
+                        </span>
+                        <span className="text-gray-600">/month</span>
+                      </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        <div className="text-center">
-                          <p className="text-3xl font-bold text-primary">
-                            KSh {plan.price.toLocaleString()}
-                            <span className="text-sm font-normal text-muted-foreground">/month</span>
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          {plan.features.map((feature, index) => (
-                            <div key={index} className="flex items-center gap-2 text-sm">
-                              <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                              <span>{feature}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        <Button 
-                          className="w-full"
-                          onClick={() => handleUpgrade(plan.id)}
-                          disabled={isProcessing}
-                          variant={plan.highlighted ? "default" : "outline"}
-                        >
-                          {plan.buttonText}
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
+                      <div className="space-y-3 mb-6">
+                        {plan.features.map((feature, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <span className="text-sm text-gray-700">{feature}</span>
+                          </div>
+                        ))}
                       </div>
+                      <Button
+                        className={`w-full ${
+                          plan.id === currentPlan.name.toLowerCase()
+                            ? 'bg-gray-600 hover:bg-gray-700'
+                            : plan.popular
+                            ? 'bg-green-600 hover:bg-green-700'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                        disabled={plan.id === currentPlan.name.toLowerCase()}
+                      >
+                        {plan.id === currentPlan.name.toLowerCase() ? 'Current Plan' : 'Upgrade Plan'}
+                        {!plan.id === currentPlan.name.toLowerCase() && <ArrowRight className="w-4 h-4 ml-2" />}
+                      </Button>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Billing History */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Billing History</CardTitle>
-                <CardDescription>
-                  Your recent invoices and payments
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {subscription.billingHistory.map((invoice) => (
-                    <div key={invoice.id} className="flex items-center justify-between p-3 border rounded-lg">
+      {/* Billing History Tab */}
+      {activeTab === "billing" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Billing History</CardTitle>
+              <CardDescription>
+                Your recent invoices and payments
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {billingHistory.map((invoice) => (
+                  <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <CreditCard className="w-5 h-5 text-blue-600" />
+                      </div>
                       <div>
-                        <p className="font-medium text-sm">{invoice.id}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(invoice.date)} • {invoice.plan}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold">KSh {invoice.amount.toLocaleString()}</p>
-                        <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'} className="text-xs">
-                          {invoice.status}
-                        </Badge>
+                        <h4 className="font-medium text-gray-900">{invoice.id}</h4>
+                        <p className="text-sm text-gray-500">{invoice.description}</p>
+                        <p className="text-xs text-gray-400">{invoice.date}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-                <Button variant="outline" className="w-full mt-4">
-                  View All Invoices
-                </Button>
-              </CardContent>
-            </Card>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">
+                        {formatCurrency(invoice.amount)}
+                      </p>
+                      <Badge 
+                        variant={invoice.status === 'paid' ? 'default' : 'secondary'}
+                        className={invoice.status === 'paid' ? 'bg-green-100 text-green-800' : ''}
+                      >
+                        {invoice.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Plan Comparison */}
+          {/* Billing Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Plan Comparison</CardTitle>
-                <CardDescription>
-                  Compare features across all plans
-                </CardDescription>
+                <CardTitle>Billing Summary</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span>Products</span>
-                    <div className="flex gap-2">
-                      <span className="text-muted-foreground">10</span>
-                      <span className="text-muted-foreground">50</span>
-                      <span className="font-bold">100</span>
-                      <span className="text-primary">Unlimited</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Storage</span>
-                    <div className="flex gap-2">
-                      <span className="text-muted-foreground">1GB</span>
-                      <span className="text-muted-foreground">5GB</span>
-                      <span className="font-bold">10GB</span>
-                      <span className="text-primary">50GB</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Support</span>
-                    <div className="flex gap-2">
-                      <span className="text-muted-foreground">Email</span>
-                      <span className="text-muted-foreground">Chat</span>
-                      <span className="font-bold">Priority</span>
-                      <span className="text-primary">24/7 Phone</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Analytics</span>
-                    <div className="flex gap-2">
-                      <span className="text-muted-foreground">Basic</span>
-                      <span className="text-muted-foreground">Standard</span>
-                      <span className="font-bold">Advanced</span>
-                      <span className="text-primary">Premium</span>
-                    </div>
-                  </div>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Current Plan</span>
+                  <span className="font-medium">{currentPlan.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Monthly Cost</span>
+                  <span className="font-medium">{formatCurrency(currentPlan.price)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Next Billing</span>
+                  <span className="font-medium">{currentPlan.nextBillingDate}</span>
+                </div>
+                <div className="flex justify-between text-lg font-semibold border-t pt-3">
+                  <span>Total This Year</span>
+                  <span>{formatCurrency(currentPlan.price * 12)}</span>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Support Card */}
             <Card>
               <CardHeader>
                 <CardTitle>Need Help?</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Contact Support
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Usage Analytics
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Users className="w-4 h-4 mr-2" />
-                  Add Team Member
-                </Button>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                  <Mail className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="font-medium text-blue-900">Email Support</p>
+                    <p className="text-sm text-blue-700">billing@cleancart.com</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                  <Phone className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-900">Phone Support</p>
+                    <p className="text-sm text-green-700">+254 700 123 456</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
+                  <HelpCircle className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <p className="font-medium text-purple-900">Help Center</p>
+                    <p className="text-sm text-purple-700">Documentation & FAQs</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Footer */}
-      <footer className="bg-muted/50 py-12 px-4 sm:px-6 lg:px-8 mt-12">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Image src="/cleancart-logo.png" alt="CleanCart Logo" width={32} height={32} className="w-8 h-8" />
-                <span className="text-xl font-bold">CleanCart</span>
+      {/* Payment Methods Tab */}
+      {activeTab === "payment" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Methods</CardTitle>
+              <CardDescription>
+                Manage your payment methods and billing information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Current Payment Method */}
+              <div className="p-4 border rounded-lg mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                      <CreditCard className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">
+                        M-Pesa •••• {paymentMethod.lastFour}
+                      </h4>
+                      <p className="text-sm text-gray-500">Expires {paymentMethod.expiry}</p>
+                      {paymentMethod.isDefault && (
+                        <Badge variant="default" className="bg-green-100 text-green-800 mt-1">
+                          Default
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm">
+                      Edit
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                      Remove
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <p className="text-muted-foreground">Kenya's premier eco-friendly cleaning supplies marketplace</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Shop</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>Household Cleaners</div>
-                <div>Industrial Equipment</div>
-                <div>Eco-Friendly Products</div>
-                <div>Waste Management</div>
+
+              {/* Add Payment Method */}
+              <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg text-center">
+                <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Add Payment Method</h3>
+                <p className="text-gray-600 mb-4">
+                  Add a new credit card, debit card, or mobile money account
+                </p>
+                <Button className="bg-green-600 hover:bg-green-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Payment Method
+                </Button>
               </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Vendors</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>Become a Vendor</div>
-                <div>Vendor Dashboard</div>
-                <div>Pricing Plans</div>
-                <div>Support</div>
+            </CardContent>
+          </Card>
+
+          {/* Billing Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Billing Information</CardTitle>
+              <CardDescription>
+                Your business billing details
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Business Name
+                    </label>
+                    <p className="text-gray-900">CleanCart Vendor Store</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Address
+                    </label>
+                    <p className="text-gray-900">vendor@cleancart.com</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number
+                    </label>
+                    <p className="text-gray-900">+254 712 345 678</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tax ID
+                    </label>
+                    <p className="text-gray-900">P0512345678</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Billing Address
+                    </label>
+                    <p className="text-gray-900">
+                      123 Business Street<br />
+                      Nairobi, Kenya<br />
+                      00100
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>About Us</div>
-                <div>Contact</div>
-                <div>Privacy Policy</div>
-                <div>Terms of Service</div>
-              </div>
-            </div>
-          </div>
-          <div className="border-t mt-8 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 CleanCart. All rights reserved. Built for a cleaner Kenya.</p>
-          </div>
+              <Button variant="outline" className="mt-6">
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Billing Information
+              </Button>
+            </CardContent>
+          </Card>
         </div>
-      </footer>
+      )}
 
-      {/* Floating Help Desk Widget */}
-      <HelpDesk />
+      {/* Security Notice */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-3">
+            <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-blue-900 mb-1">Secure Billing</h4>
+              <p className="text-sm text-blue-700">
+                Your payment information is encrypted and secure. We use industry-standard 
+                security measures to protect your data.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
