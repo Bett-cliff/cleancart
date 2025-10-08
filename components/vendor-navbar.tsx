@@ -4,10 +4,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { 
-  Package, 
-  ShoppingCart, 
   BarChart3, 
-  Settings, 
+  Settings,
   Crown,
   Users,
   Home,
@@ -15,8 +13,7 @@ import {
   Star,
   MessageSquare,
   Plus,
-  Menu,
-  ChevronDown
+  Menu
 } from "lucide-react"
 import { useVendorAuth } from "@/context/vendor-auth-context"
 import {
@@ -26,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-// Primary navigation - most used items
+// Primary navigation - only essential items
 const primaryNavigation = [
   {
     name: "Dashboard",
@@ -35,62 +32,10 @@ const primaryNavigation = [
     description: "Business overview"
   },
   {
-    name: "Products",
-    href: "/vendor/products", 
-    icon: Package,
-    description: "Manage your products"
-  },
-  {
-    name: "Orders",
-    href: "/vendor/orders",
-    icon: ShoppingCart,
-    description: "Customer orders"
-  },
-  {
     name: "Analytics",
     href: "/vendor/analytics",
     icon: BarChart3,
     description: "Sales insights"
-  }
-]
-
-// Secondary navigation - less frequently used
-const secondaryNavigation = [
-  {
-    name: "Customers", 
-    href: "/vendor/customers",
-    icon: Users,
-    description: "Customer management"
-  },
-  {
-    name: "Subscription",
-    href: "/vendor/subscription",
-    icon: Crown,
-    description: "Plan & billing"
-  },
-  {
-    name: "Shipping",
-    href: "/vendor/shipping",
-    icon: Truck,
-    description: "Delivery settings"
-  },
-  {
-    name: "Reviews",
-    href: "/vendor/reviews", 
-    icon: Star,
-    description: "Customer feedback"
-  },
-  {
-    name: "Support",
-    href: "/vendor/support",
-    icon: MessageSquare,
-    description: "Help & support"
-  },
-  {
-    name: "Settings",
-    href: "/vendor/settings",
-    icon: Settings,
-    description: "Account settings"
   }
 ]
 
@@ -119,7 +64,7 @@ export function VendorNavbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-1 flex-1 justify-center mx-4">
-            {/* Primary Navigation - Always visible */}
+            {/* Primary Navigation - Only Dashboard and Analytics */}
             {primaryNavigation.map((item) => {
               const Icon = item.icon
               const active = isActive(item.href)
@@ -141,40 +86,6 @@ export function VendorNavbar() {
                 </Link>
               )
             })}
-
-            {/* More dropdown for secondary navigation */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="flex items-center gap-2 text-gray-700 hover:text-green-700 hover:bg-green-50"
-                >
-                  <span>More</span>
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {secondaryNavigation.map((item) => {
-                  const Icon = item.icon
-                  const active = isActive(item.href)
-                  
-                  return (
-                    <DropdownMenuItem key={item.name} asChild>
-                      <Link 
-                        href={item.href} 
-                        className={`flex items-center gap-2 cursor-pointer ${
-                          active ? 'bg-green-50 text-green-700' : ''
-                        }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span>{item.name}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
 
           {/* Quick Actions - Right Side */}
@@ -201,7 +112,7 @@ export function VendorNavbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                {[...primaryNavigation, ...secondaryNavigation].map((item) => {
+                {primaryNavigation.map((item) => {
                   const Icon = item.icon
                   const active = isActive(item.href)
                   

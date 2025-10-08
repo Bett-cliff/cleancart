@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { 
   BarChart3, 
   TrendingUp, 
@@ -13,13 +12,22 @@ import {
   Package,
   Download,
   Calendar,
-  Filter,
-  ArrowUp,
-  ArrowDown,
   Eye,
   Share2,
-  RefreshCw
+  RefreshCw,
+  Star,
+  ArrowUp,
+  ArrowDown,
+  Warehouse,
+  Megaphone,
+  Crown,
+  MessageSquare,
+  Settings,
+  Truck,
+  FileText,
+  Home
 } from "lucide-react"
+import Link from "next/link"
 
 // Mock analytics data
 const analyticsData = {
@@ -74,6 +82,94 @@ const analyticsData = {
   ]
 }
 
+// All the vendor sections for the sub-navbar
+const vendorSections = [
+  {
+    id: "dashboard",
+    name: "Dashboard",
+    icon: Home,
+    href: "/vendor/dashboard",
+    description: "Business overview"
+  },
+  {
+    id: "products",
+    name: "Products",
+    icon: Package,
+    href: "/vendor/products",
+    description: "Manage your products"
+  },
+  {
+    id: "orders",
+    name: "Orders",
+    icon: ShoppingCart,
+    href: "/vendor/orders",
+    description: "Customer orders"
+  },
+  {
+    id: "inventory",
+    name: "Inventory",
+    icon: Warehouse,
+    href: "/vendor/inventory",
+    description: "Stock management"
+  },
+  {
+    id: "customers",
+    name: "Customers",
+    icon: Users,
+    href: "/vendor/customers",
+    description: "Customer database"
+  },
+  {
+    id: "marketing",
+    name: "Marketing",
+    icon: Megaphone,
+    href: "/vendor/marketing",
+    description: "Promotions & campaigns"
+  },
+  {
+    id: "payouts",
+    name: "Payouts",
+    icon: DollarSign,
+    href: "/vendor/payouts",
+    description: "Earnings & payments"
+  },
+  {
+    id: "shipping",
+    name: "Shipping",
+    icon: Truck,
+    href: "/vendor/shipping",
+    description: "Delivery & logistics"
+  },
+  {
+    id: "reviews",
+    name: "Reviews",
+    icon: Star,
+    href: "/vendor/reviews",
+    description: "Customer feedback"
+  },
+  {
+    id: "subscription",
+    name: "Subscription",
+    icon: Crown,
+    href: "/vendor/subscription",
+    description: "Plan & billing"
+  },
+  {
+    id: "support",
+    name: "Support",
+    icon: MessageSquare,
+    href: "/vendor/support",
+    description: "Help & support"
+  },
+  {
+    id: "settings",
+    name: "Settings",
+    icon: Settings,
+    href: "/vendor/settings",
+    description: "Account settings"
+  }
+]
+
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState("monthly")
   const [activeTab, setActiveTab] = useState("overview")
@@ -85,7 +181,7 @@ export default function AnalyticsPage() {
     { value: "yearly", label: "Yearly" }
   ]
 
-  const tabs = [
+  const analyticsTabs = [
     { id: "overview", label: "Overview" },
     { id: "products", label: "Products" },
     { id: "customers", label: "Customers" },
@@ -106,7 +202,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
@@ -138,6 +234,32 @@ export default function AnalyticsPage() {
             <Download className="w-4 h-4" />
             Export
           </Button>
+        </div>
+      </div>
+
+      {/* Vendor Sections Sub-Navbar */}
+      <div className="bg-white rounded-lg border shadow-sm">
+        <div className="px-4 py-3 border-b">
+          <h3 className="text-sm font-medium text-gray-900">Quick Access</h3>
+          <p className="text-xs text-gray-600">Navigate to different vendor sections</p>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {vendorSections.map((section) => {
+              const Icon = section.icon
+              return (
+                <Link key={section.id} href={section.href}>
+                  <Button
+                    variant="outline"
+                    className="w-full h-auto p-3 flex flex-col items-center justify-center gap-2 hover:bg-green-50 hover:border-green-200 transition-colors"
+                  >
+                    <Icon className="w-5 h-5 text-green-600" />
+                    <span className="text-xs font-medium text-gray-900">{section.name}</span>
+                  </Button>
+                </Link>
+              )
+            })}
+          </div>
         </div>
       </div>
 
@@ -187,10 +309,10 @@ export default function AnalyticsPage() {
         })}
       </div>
 
-      {/* Navigation Tabs */}
+      {/* Analytics Navigation Tabs */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => (
+          {analyticsTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -233,13 +355,13 @@ export default function AnalyticsPage() {
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(analyticsData.revenueData.reduce((sum, month) => sum + month.revenue, 0))}
+                    KSh 1,079,230
                   </p>
                   <p className="text-sm text-gray-600">Total Revenue</p>
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
                   <p className="text-2xl font-bold text-gray-900">
-                    {analyticsData.revenueData.reduce((sum, month) => sum + month.orders, 0)}
+                    1454
                   </p>
                   <p className="text-sm text-gray-600">Total Orders</p>
                 </div>
@@ -269,7 +391,7 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="h-2 rounded-full bg-green-500"
+                        className="h-2 rounded-full bg-blue-500"
                         style={{ width: `${category.percentage}%` }}
                       />
                     </div>
@@ -324,25 +446,6 @@ export default function AnalyticsPage() {
                     </div>
                   </div>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Product Performance Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Performance</CardTitle>
-              <CardDescription>
-                Revenue comparison across top products
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-                <div className="text-center">
-                  <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500">Product performance chart</p>
-                  <p className="text-sm text-gray-400 mt-1">(Bar chart visualization)</p>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -408,44 +511,6 @@ export default function AnalyticsPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Customer Segments */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Customer Segments</CardTitle>
-              <CardDescription>
-                Customer distribution by value and behavior
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center p-6 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Star className="w-6 h-6 text-yellow-600" />
-                  </div>
-                  <h4 className="font-semibold text-yellow-900 mb-1">Gold Tier</h4>
-                  <p className="text-2xl font-bold text-yellow-900">24%</p>
-                  <p className="text-sm text-yellow-700">High-value customers</p>
-                </div>
-                <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Users className="w-6 h-6 text-gray-600" />
-                  </div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Silver Tier</h4>
-                  <p className="text-2xl font-bold text-gray-900">42%</p>
-                  <p className="text-sm text-gray-700">Regular customers</p>
-                </div>
-                <div className="text-center p-6 bg-orange-50 rounded-lg border border-orange-200">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <TrendingUp className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <h4 className="font-semibold text-orange-900 mb-1">Bronze Tier</h4>
-                  <p className="text-2xl font-bold text-orange-900">34%</p>
-                  <p className="text-sm text-orange-700">New customers</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       )}
 
@@ -489,63 +554,6 @@ export default function AnalyticsPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Quick Reports */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Reports</CardTitle>
-                <CardDescription>
-                  Generate instant reports
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  Sales Report
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  Customer Report
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  Product Performance
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  Inventory Report
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Export Options</CardTitle>
-                <CardDescription>
-                  Download data in different formats
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  CSV Export
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  PDF Report
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share Dashboard
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Refresh Data
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       )}
 

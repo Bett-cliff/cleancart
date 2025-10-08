@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Navbar } from "@/components/navbar"
 import { useToast } from "@/hooks/use-toast"
 import { HelpDesk } from "@/components/help-desk"
 import {
@@ -16,8 +15,9 @@ import {
   Trash2,
   Save,
   X,
+  Check,
+  DollarSign
 } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 
@@ -727,8 +727,6 @@ export default function AddProductPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
-
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
@@ -814,60 +812,10 @@ export default function AddProductPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-muted/50 py-12 px-4 sm:px-6 lg:px-8 mt-12">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Image src="/cleancart-logo.png" alt="CleanCart Logo" width={32} height={32} className="w-8 h-8" />
-                <span className="text-xl font-bold">CleanCart</span>
-              </div>
-              <p className="text-muted-foreground">Kenya's premier eco-friendly cleaning supplies marketplace</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Shop</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>Household Cleaners</div>
-                <div>Industrial Equipment</div>
-                <div>Eco-Friendly Products</div>
-                <div>Waste Management</div>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Vendors</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>Become a Vendor</div>
-                <div>Vendor Dashboard</div>
-                <div>Pricing Plans</div>
-                <div>Support</div>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>About Us</div>
-                <div>Contact</div>
-                <div>Privacy Policy</div>
-                <div>Terms of Service</div>
-              </div>
-            </div>
-          </div>
-          <div className="border-t mt-8 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 CleanCart. All rights reserved. Built for a cleaner Kenya.</p>
-          </div>
-        </div>
-      </footer>
+      {/* REMOVED: Footer section */}
 
       {/* Floating Help Desk Widget */}
       <HelpDesk />
     </div>
   )
 }
-
-// Add the missing Check icon component
-const Check = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-  </svg>
-)
