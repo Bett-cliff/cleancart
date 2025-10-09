@@ -16,7 +16,16 @@ import {
   Archive,
   Trash2,
   ShoppingCart,
-  Star
+  Star,
+  Home,
+  Users,
+  DollarSign,
+  Warehouse,
+  Megaphone,
+  Crown,
+  MessageSquare,
+  Settings,
+  Truck
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -82,6 +91,94 @@ const mockProducts = [
   }
 ]
 
+// All the vendor sections for the sub-navbar
+const vendorSections = [
+  {
+    id: "dashboard",
+    name: "Dashboard",
+    icon: Home,
+    href: "/vendor/dashboard",
+    description: "Business overview"
+  },
+  {
+    id: "products",
+    name: "Products",
+    icon: Package,
+    href: "/vendor/products",
+    description: "Manage your products"
+  },
+  {
+    id: "orders",
+    name: "Orders",
+    icon: ShoppingCart,
+    href: "/vendor/orders",
+    description: "Customer orders"
+  },
+  {
+    id: "inventory",
+    name: "Inventory",
+    icon: Warehouse,
+    href: "/vendor/inventory",
+    description: "Stock management"
+  },
+  {
+    id: "customers",
+    name: "Customers",
+    icon: Users,
+    href: "/vendor/customers",
+    description: "Customer database"
+  },
+  {
+    id: "marketing",
+    name: "Marketing",
+    icon: Megaphone,
+    href: "/vendor/marketing",
+    description: "Promotions & campaigns"
+  },
+  {
+    id: "payouts",
+    name: "Payouts",
+    icon: DollarSign,
+    href: "/vendor/payouts",
+    description: "Earnings & payments"
+  },
+  {
+    id: "shipping",
+    name: "Shipping",
+    icon: Truck,
+    href: "/vendor/shipping",
+    description: "Delivery & logistics"
+  },
+  {
+    id: "reviews",
+    name: "Reviews",
+    icon: Star,
+    href: "/vendor/reviews",
+    description: "Customer feedback"
+  },
+  {
+    id: "subscription",
+    name: "Subscription",
+    icon: Crown,
+    href: "/vendor/subscription",
+    description: "Plan & billing"
+  },
+  {
+    id: "support",
+    name: "Support",
+    icon: MessageSquare,
+    href: "/vendor/support",
+    description: "Help & support"
+  },
+  {
+    id: "settings",
+    name: "Settings",
+    icon: Settings,
+    href: "/vendor/settings",
+    description: "Account settings"
+  }
+]
+
 const statusConfig = {
   active: { label: "In Stock", variant: "default" as const },
   low_stock: { label: "Low Stock", variant: "secondary" as const },
@@ -125,6 +222,32 @@ export default function ProductsPage() {
             Add Product
           </Button>
         </Link>
+      </div>
+
+      {/* Vendor Sections Sub-Navbar - ADDED THIS SECTION */}
+      <div className="bg-white rounded-lg border shadow-sm">
+        <div className="px-4 py-3 border-b">
+          <h3 className="text-sm font-medium text-gray-900">Quick Access</h3>
+          <p className="text-xs text-gray-600">Navigate to different vendor sections</p>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {vendorSections.map((section) => {
+              const Icon = section.icon
+              return (
+                <Link key={section.id} href={section.href}>
+                  <Button
+                    variant="outline"
+                    className="w-full h-auto p-3 flex flex-col items-center justify-center gap-2 hover:bg-green-50 hover:border-green-200 transition-colors"
+                  >
+                    <Icon className="w-5 h-5 text-green-600" />
+                    <span className="text-xs font-medium text-gray-900">{section.name}</span>
+                  </Button>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Stats Overview */}

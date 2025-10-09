@@ -3,9 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import { HelpDesk } from "@/components/help-desk"
 import {
   DollarSign,
   TrendingUp,
@@ -23,6 +21,17 @@ import {
   RefreshCw,
   Banknote,
   Smartphone,
+  Home,
+  Package,
+  ShoppingCart,
+  Users,
+  Warehouse,
+  Megaphone,
+  Crown,
+  MessageSquare,
+  Settings,
+  Truck,
+  Star
 } from "lucide-react"
 import { useState } from "react"
 
@@ -115,6 +124,131 @@ const mockPayoutData = {
   ]
 }
 
+// All the vendor sections for the sub-navbar
+const vendorSections = [
+  {
+    id: "dashboard",
+    name: "Dashboard",
+    icon: Home,
+    href: "/vendor/dashboard",
+    description: "Business overview"
+  },
+  {
+    id: "products",
+    name: "Products",
+    icon: Package,
+    href: "/vendor/products",
+    description: "Manage your products"
+  },
+  {
+    id: "orders",
+    name: "Orders",
+    icon: ShoppingCart,
+    href: "/vendor/orders",
+    description: "Customer orders"
+  },
+  {
+    id: "inventory",
+    name: "Inventory",
+    icon: Warehouse,
+    href: "/vendor/inventory",
+    description: "Stock management"
+  },
+  {
+    id: "customers",
+    name: "Customers",
+    icon: Users,
+    href: "/vendor/customers",
+    description: "Customer database"
+  },
+  {
+    id: "marketing",
+    name: "Marketing",
+    icon: Megaphone,
+    href: "/vendor/marketing",
+    description: "Promotions & campaigns"
+  },
+  {
+    id: "payouts",
+    name: "Payouts",
+    icon: DollarSign,
+    href: "/vendor/payouts",
+    description: "Earnings & payments"
+  },
+  {
+    id: "shipping",
+    name: "Shipping",
+    icon: Truck,
+    href: "/vendor/shipping",
+    description: "Delivery & logistics"
+  },
+  {
+    id: "reviews",
+    name: "Reviews",
+    icon: Star,
+    href: "/vendor/reviews",
+    description: "Customer feedback"
+  },
+  {
+    id: "subscription",
+    name: "Subscription",
+    icon: Crown,
+    href: "/vendor/subscription",
+    description: "Plan & billing"
+  },
+  {
+    id: "support",
+    name: "Support",
+    icon: MessageSquare,
+    href: "/vendor/support",
+    description: "Help & support"
+  },
+  {
+    id: "settings",
+    name: "Settings",
+    icon: Settings,
+    href: "/vendor/settings",
+    description: "Account settings"
+  }
+]
+
+// Simple bar chart component for revenue visualization
+const RevenueChart = ({ data }: { data: { month: string; revenue: number }[] }) => {
+  const maxRevenue = Math.max(...data.map(d => d.revenue));
+  
+  return (
+    <div className="w-full h-48 flex items-end justify-between gap-2 pt-4">
+      {data.map((item, index) => (
+        <div key={index} className="flex flex-col items-center flex-1">
+          <div className="text-xs text-muted-foreground mb-1">{item.month}</div>
+          <div
+            className="w-full bg-gradient-to-t from-blue-500 to-blue-600 rounded-t-sm transition-all hover:from-blue-400 hover:to-blue-500 cursor-pointer"
+            style={{ height: `${(item.revenue / maxRevenue) * 100}%` }}
+            title={`${item.month}: KES ${item.revenue.toLocaleString()}`}
+          />
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Progress bar for stock levels
+const StockProgress = ({ stock, lowStockThreshold = 10 }: { stock: number; lowStockThreshold?: number }) => {
+  const percentage = Math.min((stock / 50) * 100, 100); // Assuming 50 is max stock for visualization
+  const isLow = stock <= lowStockThreshold;
+  
+  return (
+    <div className="w-full bg-gray-200 rounded-full h-2">
+      <div
+        className={`h-2 rounded-full ${
+          isLow ? 'bg-red-500' : 'bg-green-500'
+        } transition-all duration-300`}
+        style={{ width: `${percentage}%` }}
+      />
+    </div>
+  );
+};
+
 export default function VendorPayoutsPage() {
   const { toast } = useToast()
   const [payoutData, setPayoutData] = useState(mockPayoutData)
@@ -124,7 +258,7 @@ export default function VendorPayoutsPage() {
   const stats = [
     {
       title: "Available Balance",
-      value: `KSh ${payoutData.overview.balance.toLocaleString()}`,
+      value: `KES ${payoutData.overview.balance.toLocaleString()}`,
       description: "Ready for payout",
       icon: Wallet,
       color: "text-green-600",
@@ -132,7 +266,7 @@ export default function VendorPayoutsPage() {
     },
     {
       title: "Pending Balance",
-      value: `KSh ${payoutData.overview.pending.toLocaleString()}`,
+      value: `KES ${payoutData.overview.pending.toLocaleString()}`,
       description: "Clearing in 3-5 days",
       icon: Clock,
       color: "text-yellow-600",
@@ -140,7 +274,7 @@ export default function VendorPayoutsPage() {
     },
     {
       title: "This Month",
-      value: `KSh ${payoutData.overview.thisMonth.toLocaleString()}`,
+      value: `KES ${payoutData.overview.thisMonth.toLocaleString()}`,
       description: "June 2024 earnings",
       icon: TrendingUp,
       color: "text-blue-600",
@@ -148,7 +282,7 @@ export default function VendorPayoutsPage() {
     },
     {
       title: "Total Earnings",
-      value: `KSh ${payoutData.overview.totalEarnings.toLocaleString()}`,
+      value: `KES ${payoutData.overview.totalEarnings.toLocaleString()}`,
       description: "All-time revenue",
       icon: DollarSign,
       color: "text-purple-600",
@@ -158,16 +292,15 @@ export default function VendorPayoutsPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      completed: { label: 'Completed', variant: 'default' as const, icon: CheckCircle2 },
-      processing: { label: 'Processing', variant: 'secondary' as const, icon: Clock },
-      failed: { label: 'Failed', variant: 'destructive' as const, icon: XCircle },
-      pending: { label: 'Pending', variant: 'outline' as const, icon: Clock },
+      completed: { label: 'Completed', variant: 'default' as const, icon: CheckCircle2, color: "text-green-600" },
+      pending: { label: 'Pending', variant: 'secondary' as const, icon: Clock, color: "text-yellow-600" },
+      cancelled: { label: 'Cancelled', variant: 'destructive' as const, icon: XCircle, color: "text-red-600" }
     }
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const, icon: Clock }
+    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: "outline" as const, color: "text-gray-600" }
     const IconComponent = config.icon
     return (
       <Badge variant={config.variant} className="flex items-center gap-1 text-xs">
-        <IconComponent className="w-3 h-3" />
+        <IconComponent className={`w-3 h-3 ${config.color}`} />
         {config.label}
       </Badge>
     )
@@ -210,7 +343,7 @@ export default function VendorPayoutsPage() {
     if (payoutData.overview.balance < payoutData.payoutSchedule.minimumPayout) {
       toast({
         title: "Minimum Payout Not Met",
-        description: `Minimum payout amount is KSh ${payoutData.payoutSchedule.minimumPayout.toLocaleString()}`,
+        description: `Minimum payout amount is KES ${payoutData.payoutSchedule.minimumPayout.toLocaleString()}`,
         variant: "destructive",
       })
       return
@@ -245,7 +378,7 @@ export default function VendorPayoutsPage() {
 
       toast({
         title: "Payout Requested!",
-        description: `KSh ${payoutData.overview.balance.toLocaleString()} is being processed to your M-PESA.`,
+        description: `KES ${payoutData.overview.balance.toLocaleString()} is being processed to your M-PESA.`,
       })
     } catch (error) {
       toast({
@@ -291,8 +424,6 @@ export default function VendorPayoutsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* REMOVED: Navbar - Already provided by vendor layout */}
-
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
@@ -311,6 +442,32 @@ export default function VendorPayoutsPage() {
               <Download className="w-4 h-4" />
               Export
             </Button>
+          </div>
+        </div>
+
+        {/* Vendor Sections Sub-Navbar - ADDED THIS SECTION */}
+        <div className="bg-white rounded-lg border shadow-sm mb-8">
+          <div className="px-4 py-3 border-b">
+            <h3 className="text-sm font-medium text-gray-900">Quick Access</h3>
+            <p className="text-xs text-gray-600">Navigate to different vendor sections</p>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {vendorSections.map((section) => {
+                const Icon = section.icon
+                return (
+                  <a key={section.id} href={section.href}>
+                    <Button
+                      variant="outline"
+                      className="w-full h-auto p-3 flex flex-col items-center justify-center gap-2 hover:bg-green-50 hover:border-green-200 transition-colors"
+                    >
+                      <Icon className="w-5 h-5 text-green-600" />
+                      <span className="text-xs font-medium text-gray-900">{section.name}</span>
+                    </Button>
+                  </a>
+                )
+              })}
+            </div>
           </div>
         </div>
 
@@ -358,11 +515,11 @@ export default function VendorPayoutsPage() {
                     <div>
                       <p className="font-semibold">Available for Payout</p>
                       <p className="text-2xl font-bold text-primary">
-                        KSh {payoutData.overview.balance.toLocaleString()}
+                        KES {payoutData.overview.balance.toLocaleString()}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Minimum: KSh 1,000</p>
+                      <p className="text-sm text-muted-foreground">Minimum: KES 1,000</p>
                       <p className="text-sm text-muted-foreground">Next auto-payout: {formatDate(payoutData.payoutSchedule.nextPayout)}</p>
                     </div>
                   </div>
@@ -408,7 +565,7 @@ export default function VendorPayoutsPage() {
 
                   {payoutData.overview.balance < payoutData.payoutSchedule.minimumPayout && (
                     <p className="text-sm text-center text-muted-foreground">
-                      Minimum payout amount is KSh {payoutData.payoutSchedule.minimumPayout.toLocaleString()}
+                      Minimum payout amount is KES {payoutData.payoutSchedule.minimumPayout.toLocaleString()}
                     </p>
                   )}
                 </div>
@@ -450,7 +607,7 @@ export default function VendorPayoutsPage() {
                             height: `${(month.earnings / 80000) * 100}%`,
                             minHeight: '20px'
                           }}
-                          title={`Earnings: KSh ${month.earnings.toLocaleString()}`}
+                          title={`Earnings: KES ${month.earnings.toLocaleString()}`}
                         />
                         <div 
                           className="w-3/4 bg-blue-500 rounded-t transition-all hover:bg-blue-400 cursor-pointer"
@@ -458,7 +615,7 @@ export default function VendorPayoutsPage() {
                             height: `${(month.payouts / 80000) * 100}%`,
                             minHeight: '20px'
                           }}
-                          title={`Payouts: KSh ${month.payouts.toLocaleString()}`}
+                          title={`Payouts: KES ${month.payouts.toLocaleString()}`}
                         />
                       </div>
                       <span className="text-xs text-muted-foreground mt-2">
@@ -511,7 +668,7 @@ export default function VendorPayoutsPage() {
                         <p className={`font-bold ${
                           transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
                         }`}>
-                          {transaction.amount > 0 ? '+' : ''}KSh {Math.abs(transaction.amount).toLocaleString()}
+                          {transaction.amount > 0 ? '+' : ''}KES {Math.abs(transaction.amount).toLocaleString()}
                         </p>
                         {getStatusBadge(transaction.status)}
                       </div>
@@ -556,7 +713,7 @@ export default function VendorPayoutsPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Minimum Amount</span>
-                  <span className="font-medium">KSh {payoutData.payoutSchedule.minimumPayout.toLocaleString()}</span>
+                  <span className="font-medium">KES {payoutData.payoutSchedule.minimumPayout.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Processing Time</span>
@@ -657,11 +814,6 @@ export default function VendorPayoutsPage() {
           </div>
         </div>
       </div>
-
-      {/* REMOVED: Footer section */}
-
-      {/* Floating Help Desk Widget */}
-      <HelpDesk />
     </div>
   )
 }
