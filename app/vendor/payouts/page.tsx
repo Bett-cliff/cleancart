@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Navbar } from "@/components/navbar"
 import { useToast } from "@/hooks/use-toast"
 import { HelpDesk } from "@/components/help-desk"
 import {
@@ -25,7 +24,6 @@ import {
   Banknote,
   Smartphone,
 } from "lucide-react"
-import Image from "next/image"
 import { useState } from "react"
 
 // Mock payout data
@@ -293,7 +291,7 @@ export default function VendorPayoutsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      {/* REMOVED: Navbar - Already provided by vendor layout */}
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -660,50 +658,7 @@ export default function VendorPayoutsPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-muted/50 py-12 px-4 sm:px-6 lg:px-8 mt-12">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Image src="/cleancart-logo.png" alt="CleanCart Logo" width={32} height={32} className="w-8 h-8" />
-                <span className="text-xl font-bold">CleanCart</span>
-              </div>
-              <p className="text-muted-foreground">Kenya's premier eco-friendly cleaning supplies marketplace</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Shop</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>Household Cleaners</div>
-                <div>Industrial Equipment</div>
-                <div>Eco-Friendly Products</div>
-                <div>Waste Management</div>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Vendors</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>Become a Vendor</div>
-                <div>Vendor Dashboard</div>
-                <div>Pricing Plans</div>
-                <div>Support</div>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <div className="space-y-2 text-muted-foreground">
-                <div>About Us</div>
-                <div>Contact</div>
-                <div>Privacy Policy</div>
-                <div>Terms of Service</div>
-              </div>
-            </div>
-          </div>
-          <div className="border-t mt-8 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 CleanCart. All rights reserved. Built for a cleaner Kenya.</p>
-          </div>
-        </div>
-      </footer>
+      {/* REMOVED: Footer section */}
 
       {/* Floating Help Desk Widget */}
       <HelpDesk />
