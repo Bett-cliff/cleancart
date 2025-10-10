@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useReducer, useEffect } from 'react'
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
 
 export interface CartItem {
   id: string | number
@@ -81,7 +81,15 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 
     case 'UPDATE_QUANTITY':
       if (action.payload.quantity <= 0) {
-        return cartReducer(state, { type: 'REMOVE_ITEM', payload: action.payload.id })
+        const filteredItems = state.items.filter(item => item.id !== action.payload.id)
+        const totalAfterRemove = filteredItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+        const itemCountAfterRemove = filteredItems.reduce((sum, item) => sum + item.quantity, 0)
+        
+        return {
+          items: filteredItems,
+          total: totalAfterRemove,
+          itemCount: itemCountAfterRemove
+        }
       }
 
       const updatedItems = state.items.map(item =>
@@ -135,33 +143,42 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (savedCart) {
       try {
         const cartData = JSON.parse(savedCart)
-        dispatch({ type: 'LOAD_CART', payload: cartData })
+        // Only load if we have actual items and we're not already loaded
+        if (cartData.length > 0 && state.items.length === 0) {
+          dispatch({ type: 'LOAD_CART', payload: cartData })
+        }
       } catch (error) {
         console.error('Error loading cart from localStorage:', error)
       }
     }
-  }, [])
+  }, []) // Empty dependency array - only run once on mount
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('ecoclean-cart', JSON.stringify(state.items))
+    if (state.items.length > 0 || localStorage.getItem('ecoclean-cart')) {
+      localStorage.setItem('ecoclean-cart', JSON.stringify(state.items))
+    }
   }, [state.items])
 
-  const addToCart = (item: Omit<CartItem, 'quantity'>) => {
+  // Use useCallback to prevent unnecessary re-renders
+  const addToCart = useCallback((item: Omit<CartItem, 'quantity'>) => {
     dispatch({ type: 'ADD_ITEM', payload: { ...item, quantity: 1 } })
-  }
+  }, [])
 
-  const removeFromCart = (id: string | number) => {
+  const removeFromCart = useCallback((id: string | number) => {
     dispatch({ type: 'REMOVE_ITEM', payload: id })
-  }
+  }, [])
 
-  const updateQuantity = (id: string | number, quantity: number) => {
+  const updateQuantity = useCallback((id: string | number, quantity: number) => {
     dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } })
-  }
+  }, [])
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
+    console.log('Clearing cart...')
     dispatch({ type: 'CLEAR_CART' })
-  }
+    // Also clear localStorage
+    localStorage.removeItem('ecoclean-cart')
+  }, [])
 
   const value: CartContextType = {
     state,
