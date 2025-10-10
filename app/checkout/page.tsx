@@ -1,0 +1,288 @@
+"use client"
+
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import {
+  ArrowLeft,
+  CreditCard,
+  Lock,
+  MapPin,
+  User,
+  Phone,
+  Mail,
+  Truck,
+  Shield,
+  CheckCircle,
+  Package  // ← ADD THIS IMPORT
+} from "lucide-react"
+import Link from "next/link"
+import { useCart } from "@/app/contexts/CartContext"
+import FixedNavbar from "@/app/components/FixedNavbar"
+import { useState } from "react"
+
+export default function CheckoutPage() {
+  const { state, cartItemsCount } = useCart()
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  // Add safe access to state properties
+  const items = state?.items || []
+  const total = state?.total || 0
+
+  const deliveryFee = total > 5000 ? 0 : 300
+  const tax = total * 0.14 // 14% VAT
+  const grandTotal = total + deliveryFee + tax
+
+  const handlePlaceOrder = async () => {
+    setIsProcessing(true)
+    // Simulate payment processing
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    setIsProcessing(false)
+    // Redirect to success page
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+        <FixedNavbar cartItemsCount={cartItemsCount} />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+          <Card className="border-emerald-100 bg-emerald-50 max-w-md mx-auto">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CreditCard className="w-8 h-8 text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Your cart is empty</h3>
+              <p className="text-gray-600 mb-6">
+                Add some eco-friendly products to your cart before checking out
+              </p>
+              <Link href="/">
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  Continue Shopping
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+      <FixedNavbar cartItemsCount={cartItemsCount} />
+      
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+        {/* Progress Steps */}
+        <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center">
+            <Badge className="bg-emerald-600 text-white">1</Badge>
+            <span className="ml-2 font-medium text-emerald-600">Cart</span>
+          </div>
+          <div className="w-8 h-0.5 bg-emerald-600 mx-4"></div>
+          <div className="flex items-center">
+            <Badge className="bg-emerald-600 text-white">2</Badge>
+            <span className="ml-2 font-medium text-emerald-600">Checkout</span>
+          </div>
+          <div className="w-8 h-0.5 bg-gray-300 mx-4"></div>
+          <div className="flex items-center">
+            <Badge variant="outline" className="text-gray-400">3</Badge>
+            <span className="ml-2 font-medium text-gray-400">Confirmation</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+          {/* Checkout Form */}
+          <div className="space-y-6">
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Delivery Information</h2>
+                
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name
+                    </label>
+                    <Input placeholder="John" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name
+                    </label>
+                    <Input placeholder="Doe" />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Address
+                    </label>
+                    <Input type="email" placeholder="john@example.com" />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number
+                    </label>
+                    <Input type="tel" placeholder="+254 712 345 678" />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Delivery Address
+                    </label>
+                    <Input placeholder="Street address, apartment, suite, etc." />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        City
+                      </label>
+                      <Input placeholder="Nairobi" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        ZIP Code
+                      </label>
+                      <Input placeholder="00100" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Payment Method</h2>
+                
+                <div className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start h-16">
+                    <CreditCard className="w-5 h-5 mr-3" />
+                    <div className="text-left">
+                      <div className="font-medium">Credit/Debit Card</div>
+                      <div className="text-xs text-gray-500">Pay with Visa, Mastercard, or American Express</div>
+                    </div>
+                  </Button>
+                  
+                  <Button variant="outline" className="w-full justify-start h-16">
+                    <div className="w-5 h-5 mr-3 bg-orange-500 rounded flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">M</span>
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium">M-Pesa</div>
+                      <div className="text-xs text-gray-500">Pay via M-Pesa mobile money</div>
+                    </div>
+                  </Button>
+                  
+                  <Button variant="outline" className="w-full justify-start h-16">
+                    <div className="w-5 h-5 mr-3 bg-blue-500 rounded flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">P</span>
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium">PayPal</div>
+                      <div className="text-xs text-gray-500">Pay with your PayPal account</div>
+                    </div>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Order Summary */}
+          <div className="space-y-6">
+            <Card className="sticky top-24">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h3>
+                
+                {/* Items List */}
+                <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
+                  {items.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-emerald-100 rounded flex items-center justify-center">
+                          <Package className="w-3 h-3 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium line-clamp-1">{item.name}</p>
+                          <p className="text-gray-500">Qty: {item.quantity}</p>
+                        </div>
+                      </div>
+                      <p className="font-medium">KSh {(item.price * item.quantity).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pricing */}
+                <div className="space-y-2 border-t pt-4">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal</span>
+                    <span>KSh {total.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Delivery</span>
+                    <span className={deliveryFee === 0 ? "text-green-600" : ""}>
+                      {deliveryFee === 0 ? "FREE" : `KSh ${deliveryFee}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Tax (14%)</span>
+                    <span>KSh {tax.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                    <span>Total</span>
+                    <span className="text-emerald-600">KSh {grandTotal.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Place Order Button */}
+                <Button
+                  onClick={handlePlaceOrder}
+                  disabled={isProcessing}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 text-lg font-semibold mt-6"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-5 h-5 mr-2" />
+                      Place Order
+                    </>
+                  )}
+                </Button>
+
+                {/* Back to Cart */}
+                <Link href="/cart">
+                  <Button variant="outline" className="w-full mt-3">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Cart
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Security Features */}
+            <Card className="border-emerald-200 bg-emerald-50">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-emerald-600" />
+                    <span>Secure Payment</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-emerald-600" />
+                    <span>Free Delivery Over KSh 5,000</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
