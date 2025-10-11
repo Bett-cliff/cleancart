@@ -1,21 +1,22 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-import { CartProvider } from '@/app/contexts/CartContext'
-import { ThemeProvider } from '@/components/theme-provider'
+// app/layout.tsx
+import type { Metadata } from "next"
+import { Inter } from "next/font/google"
+import "./globals.css"
+import { ThemeProvider } from "@/components/theme-provider"
+import { CartProvider } from "@/app/contexts/CartContext"
+import { VendorProvider } from "@/app/contexts/vendor-context"
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: 'EcoClean Kenya - Green Cleaning Supplies Marketplace',
-  description: 'Kenya\'s premier marketplace for eco-friendly cleaning supplies, equipment, and professional cleaning products. Source from verified green suppliers across Kenya.',
-  keywords: 'cleaning supplies, eco-friendly, Kenya, marketplace, green products, disinfectants, cleaning equipment',
-  authors: [{ name: 'EcoClean Kenya' }],
-  openGraph: {
-    title: 'EcoClean Kenya - Green Cleaning Marketplace',
-    description: 'Kenya\'s premier marketplace for eco-friendly cleaning supplies',
-    type: 'website',
-    locale: 'en_KE',
+  title: "CleanCart - Smart Shopping Solutions",
+  description: "Kenya's premier online marketplace for quality products and supplies",
+  manifest: "/manifest.json",
+  themeColor: "#22c55e",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CleanCart",
   },
 }
 
@@ -28,6 +29,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#22c55e" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body className={inter.className}>
@@ -37,9 +41,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <CartProvider>
-            {children}
-          </CartProvider>
+          <VendorProvider>
+            <CartProvider>
+              {children}
+            </CartProvider>
+          </VendorProvider>
         </ThemeProvider>
       </body>
     </html>

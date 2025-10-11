@@ -196,7 +196,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   )
 }
 
-export const useCart = () => {
+// ✅ FIX: Change from arrow function to function declaration
+export function useCart() {
   const context = useContext(CartContext)
   if (context === undefined) {
     throw new Error('useCart must be used within a CartProvider')

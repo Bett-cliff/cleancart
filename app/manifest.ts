@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "CleanCart - Eco-Friendly Cleaning Supplies",
+    name: "CleanCart - Smart Shopping Solutions",
     short_name: "CleanCart",
-    description: "Kenya's premier eco-friendly cleaning supplies marketplace",
+    description: "Kenya's premier online marketplace for quality products and supplies",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

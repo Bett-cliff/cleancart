@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Store, Package, TrendingUp, ArrowRight } from "lucide-react"
 import Link from "next/link"
-import { useVendorStore } from "@/contexts/vendor-context"
+import { useVendorStore } from "@/app/contexts/vendor-context" // Fixed import path
 
 export default function AdminDashboard() {
   const { vendors } = useVendorStore()

@@ -13,13 +13,59 @@ export interface Vendor {
 
 class VendorApi {
   private token: string | null = null
+  private vendor: Vendor | null = null
+
+  constructor() {
+    // Load token from localStorage on initialization
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('vendor_token')
+      const vendorData = localStorage.getItem('vendor_data')
+      if (vendorData) {
+        try {
+          this.vendor = JSON.parse(vendorData)
+        } catch (error) {
+          console.error('Failed to parse vendor data from localStorage:', error)
+        }
+      }
+    }
+  }
 
   setToken(token: string) {
     this.token = token
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vendor_token', token)
+    }
+  }
+
+  getToken(): string | null {
+    return this.token
+  }
+
+  setCurrentVendor(vendor: Vendor) {
+    this.vendor = vendor
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vendor_data', JSON.stringify(vendor))
+    }
+  }
+
+  getCurrentVendor(): Vendor | null {
+    return this.vendor
   }
 
   clearToken() {
     this.token = null
+    this.vendor = null
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('vendor_token')
+      localStorage.removeItem('vendor_data')
+    }
+  }
+
+  clearCurrentVendor() {
+    this.vendor = null
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('vendor_data')
+    }
   }
 
   hasToken(): boolean {

@@ -109,11 +109,11 @@ export default function SuccessPage() {
       doc.setFontSize(20)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(34, 197, 94) // Emerald color
-      doc.text('ECO-CLEAN', pageWidth / 2, yPosition, { align: 'center' })
+      doc.text('CleanCart', pageWidth / 2, yPosition, { align: 'center' })
       
       doc.setFontSize(12)
       doc.setTextColor(100, 100, 100)
-      doc.text('Eco-Friendly Cleaning Solutions', pageWidth / 2, yPosition + 7, { align: 'center' })
+      doc.text('Smart Shopping Solutions', pageWidth / 2, yPosition + 7, { align: 'center' })
       doc.text('Nairobi, Kenya', pageWidth / 2, yPosition + 14, { align: 'center' })
       
       yPosition += 30
@@ -238,11 +238,11 @@ export default function SuccessPage() {
       // Footer
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 150)
-      doc.text('Thank you for choosing Eco-Clean!', pageWidth / 2, yPosition, { align: 'center' })
+      doc.text('Thank you for choosing CleanCart!', pageWidth / 2, yPosition, { align: 'center' })
       yPosition += 5
       doc.text('This is an computer-generated receipt. No signature required.', pageWidth / 2, yPosition, { align: 'center' })
       yPosition += 5
-      doc.text('For questions, contact: support@ecoclean.com | +254 700 123 456', pageWidth / 2, yPosition, { align: 'center' })
+      doc.text('For questions, contact: support@cleancart.com | +254 700 123 456', pageWidth / 2, yPosition, { align: 'center' })
 
       // Save the PDF
       doc.save(`receipt-${order.orderNumber}.pdf`)
@@ -258,7 +258,7 @@ export default function SuccessPage() {
     if (!order) return
     
     const receiptContent = `
-ECO-CLEAN - ORDER RECEIPT
+CleanCart - ORDER RECEIPT
 =========================
 
 Receipt Number: ${order.orderNumber}
@@ -293,7 +293,7 @@ ${order.paymentPhone ? `Payment Phone: ${order.paymentPhone}` : ''}
 Thank you for your purchase!
 ============================
 This is a computer-generated receipt.
-For support: support@ecoclean.com | +254 700 123 456
+For support: support@cleancart.com | +254 700 123 456
     `
     
     const blob = new Blob([receiptContent], { type: 'text/plain' })
@@ -342,7 +342,7 @@ For support: support@ecoclean.com | +254 700 123 456
                 }
               </p>
               <div className="space-y-3">
-                <Link href="/">
+                <Link href="/marketplace">
                   <Button className="bg-emerald-600 hover:bg-emerald-700 text-white w-full">
                     <Home className="w-4 h-4 mr-2" />
                     Continue Shopping
@@ -592,7 +592,7 @@ For support: support@ecoclean.com | +254 700 123 456
                     </p>
                     
                     <div className="space-y-2">
-                      <Link href="/">
+                      <Link href="/marketplace">
                         <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
                           <Home className="w-4 h-4 mr-2" />
                           Continue Shopping
@@ -643,7 +643,7 @@ For support: support@ecoclean.com | +254 700 123 456
                     </Link>
                     <div className="text-center">
                       <p className="text-xs text-gray-500">
-                        Email: support@ecoclean.com<br />
+                        Email: support@cleancart.com<br />
                         Phone: +254 700 123 456
                       </p>
                     </div>

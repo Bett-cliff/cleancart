@@ -1,3 +1,4 @@
+// app/vendor/login/page.tsx
 "use client"
 
 import { Button } from "@/components/ui/button"
@@ -9,10 +10,10 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Mail, Lock, ArrowLeft, Building } from "lucide-react"
 import Link from "next/link"
-import { useVendorAuth } from "@/context/vendor-auth-context"
+import { useVendorAuthContext } from "@/contexts/vendor-auth-context"
 
 export default function VendorLoginPage() {
-  const { login, isLoading } = useVendorAuth()
+  const { login, isLoading } = useVendorAuthContext()
   const { toast } = useToast()
   const router = useRouter()
   const [formData, setFormData] = useState({
@@ -48,9 +49,11 @@ export default function VendorLoginPage() {
         description: `Welcome back, ${result.vendor?.businessName || 'Vendor'}!`,
       })
       
-      // 🔥 ADDED: Redirect to dashboard
-      console.log('🚀 Login successful, redirecting to dashboard...')
-      router.push('/vendor/dashboard')
+      // Add a small delay to ensure state is updated, then hard redirect
+      console.log('🚀 Login successful, forcing redirect to dashboard...')
+      setTimeout(() => {
+        window.location.href = '/vendor/dashboard' // Hard redirect
+      }, 100)
     } else {
       toast({
         title: "Login Failed",

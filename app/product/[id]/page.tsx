@@ -31,59 +31,9 @@ import {
   Calendar
 } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useCart } from "@/app/contexts/CartContext"
 import FixedNavbar from "@/app/components/FixedNavbar"
-
-// Sample product data - in real app, this would come from API
-const productData = {
-  id: 1,
-  name: "Multi-Surface Cleaner 5L - Professional Grade",
-  description: "Professional-grade multi-surface cleaner that effectively removes dirt, grime, and stains from all surfaces. Eco-certified and safe for families and pets.",
-  price: 1899,
-  originalPrice: 2500,
-  discount: 24,
-  images: [
-    "/api/placeholder/600/600",
-    "/api/placeholder/600/600",
-    "/api/placeholder/600/600",
-    "/api/placeholder/600/600"
-  ],
-  vendor: {
-    id: "sparkle-pro-clean",
-    name: "Sparkle Pro Clean",
-    rating: 4.8,
-    reviewCount: 342,
-    location: "Nairobi, Kenya",
-    isVerified: true,
-    isPremium: true
-  },
-  category: "Cleaner",
-  features: [
-    "5L Concentrate - Makes 25L of cleaning solution",
-    "All Surfaces - Safe for tiles, wood, glass, and stainless steel",
-    "Professional Grade - Commercial cleaning strength",
-    "Eco Certified - Environmentally friendly formula",
-    "Streak-Free - Leaves surfaces sparkling clean",
-    "Quick Dry - No residue left behind"
-  ],
-  specifications: {
-    volume: "5 Liters",
-    coverage: "Up to 2500 sq ft",
-    dilution: "1:4 ratio with water",
-    scent: "Fresh Lemon",
-    packaging: "HDPE Plastic Bottle",
-    shelfLife: "24 months"
-  },
-  rating: 4.8,
-  reviewCount: 124,
-  sold: 78,
-  stock: "In stock",
-  delivery: "Tomorrow",
-  isAmazonChoice: true,
-  isBestSeller: false,
-  coupon: "SAVE100"
-}
 
 // Sample reviews data
 const reviews = [
@@ -155,28 +105,71 @@ const relatedProducts = [
   }
 ]
 
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  description: string;
+  image: string;
+  category: string;
+  rating: number;
+  reviewCount: number;
+  features: string[];
+  vendor: string;
+  inStock: boolean;
+  sold?: number;
+  delivery?: string;
+  coupon?: string;
+}
+
 export default function ProductPage({ params }: { params: { id: string } }) {
   const { cartItemsCount, addToCart } = useCart()
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [activeTab, setActiveTab] = useState("description")
   const [showNotification, setShowNotification] = useState(false)
+  const [product, setProduct] = useState<Product | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const product = productData // In real app, fetch by params.id
+  useEffect(() => {
+    loadProductData()
+  }, [params.id])
+
+  const loadProductData = () => {
+    try {
+      const productData = localStorage.getItem('currentProduct')
+      console.log('📦 Raw localStorage data:', productData)
+      
+      if (productData) {
+        const parsedProduct = JSON.parse(productData)
+        console.log('📦 Parsed product data:', parsedProduct)
+        setProduct(parsedProduct)
+      } else {
+        console.log('❌ No product data found in localStorage')
+      }
+    } catch (error) {
+      console.error('❌ Error loading product data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleAddToCart = () => {
+    if (!product) return
+
     // Create product object with all necessary details for cart
     const productToAdd = {
       id: product.id,
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice,
-      image: product.images[0],
-      vendor: product.vendor.name,
+      image: product.image,
+      vendor: product.vendor,
       type: product.category,
       features: product.features,
-      delivery: product.delivery,
-      stock: product.stock
+      delivery: product.delivery || "Tomorrow",
+      stock: product.inStock ? "In stock" : "Out of stock"
     }
 
     // Add to cart with the specified quantity
@@ -202,6 +195,70 @@ export default function ProductPage({ params }: { params: { id: string } }) {
         }`}
       />
     ))
+  }
+
+  // Default vendor data
+  const defaultVendor = {
+    id: "default-vendor",
+    name: "EcoClean Supplies",
+    rating: 4.8,
+    reviewCount: 342,
+    location: "Nairobi, Kenya",
+    isVerified: true,
+    isPremium: true
+  }
+
+  // Default specifications
+  const defaultSpecifications = {
+    volume: "5 Liters",
+    coverage: "Up to 2500 sq ft",
+    dilution: "1:4 ratio with water",
+    scent: "Fresh Lemon",
+    packaging: "HDPE Plastic Bottle",
+    shelfLife: "24 months"
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+        <FixedNavbar cartItemsCount={cartItemsCount} />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading product...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+        <FixedNavbar cartItemsCount={cartItemsCount} />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Product Not Found</h1>
+            <p className="text-gray-600 mb-8">The product you're looking for doesn't exist.</p>
+            <Link 
+              href="/marketplace" 
+              className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors"
+            >
+              Back to Marketplace
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const discount = product.originalPrice 
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : 0
+
+  const vendor = {
+    ...defaultVendor,
+    name: product.vendor || defaultVendor.name
   }
 
   return (
@@ -241,8 +298,8 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             Marketplace
           </Link>
           <span>›</span>
-          <Link href="/categories/cleaners" className="hover:text-emerald-600 transition-colors">
-            Cleaners
+          <Link href={`/marketplace?category=${product.category}`} className="hover:text-emerald-600 transition-colors">
+            {product.category}
           </Link>
           <span>›</span>
           <span className="text-gray-900 font-medium">{product.name}</span>
@@ -253,14 +310,22 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           <div className="space-y-4">
             {/* Main Image */}
             <div className="aspect-square bg-gradient-to-br from-emerald-100 to-green-100 rounded-2xl overflow-hidden border border-emerald-200">
-              <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center">
-                <Sparkles className="w-16 h-16 text-white" />
-              </div>
+              {product.image ? (
+                <img 
+                  src={product.image} 
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center">
+                  <Sparkles className="w-16 h-16 text-white" />
+                </div>
+              )}
             </div>
 
             {/* Thumbnail Images */}
             <div className="grid grid-cols-4 gap-3">
-              {product.images.map((_, index) => (
+              {[0, 1, 2, 3].map((index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
@@ -270,9 +335,17 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                       : "border-gray-200 hover:border-emerald-300"
                   }`}
                 >
-                  <div className="w-full h-full bg-gradient-to-br from-emerald-100 to-green-100 flex items-center justify-center">
-                    <Sparkles className="w-6 h-6 text-emerald-600" />
-                  </div>
+                  {product.image ? (
+                    <img 
+                      src={product.image} 
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-emerald-100 to-green-100 flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-emerald-600" />
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
@@ -286,12 +359,10 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                 <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
                   {product.category}
                 </Badge>
-                {product.isAmazonChoice && (
-                  <Badge className="bg-blue-500 text-white">
-                    <Crown className="w-3 h-3 mr-1" />
-                    EcoClean's Choice
-                  </Badge>
-                )}
+                <Badge className="bg-blue-500 text-white">
+                  <Crown className="w-3 h-3 mr-1" />
+                  EcoClean's Choice
+                </Badge>
                 {product.coupon && (
                   <Badge className="bg-purple-500 text-white">
                     Save {product.coupon}
@@ -312,18 +383,18 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                 </div>
                 <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
                 <span className="text-sm text-green-600 font-semibold">
-                  {product.sold} sold
+                  {product.sold || 78} sold
                 </span>
               </div>
 
               <div className="flex items-center gap-3 text-sm text-gray-600 mb-4">
                 <div className="flex items-center gap-1">
                   <Package className="w-4 h-4" />
-                  <span>{product.stock}</span>
+                  <span>{product.inStock ? "In stock" : "Out of stock"}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Truck className="w-4 h-4" />
-                  <span>Delivery {product.delivery}</span>
+                  <span>Delivery {product.delivery || "Tomorrow"}</span>
                 </div>
               </div>
             </div>
@@ -333,13 +404,13 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               <span className="text-4xl font-bold text-emerald-600">
                 KSh {product.price}
               </span>
-              {product.originalPrice > product.price && (
+              {product.originalPrice && product.originalPrice > product.price && (
                 <>
                   <span className="text-2xl text-gray-500 line-through">
                     KSh {product.originalPrice}
                   </span>
                   <Badge className="bg-red-500 text-white text-lg">
-                    Save {product.discount}%
+                    Save {discount}%
                   </Badge>
                 </>
               )}
@@ -355,29 +426,29 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <Link 
-                        href={`/vendor/${product.vendor.id}/store`}
+                        href={`/vendor/${vendor.id}/store`}
                         className="font-semibold text-gray-900 hover:text-emerald-600 transition-colors"
                       >
-                        {product.vendor.name}
+                        {vendor.name}
                       </Link>
-                      {product.vendor.isVerified && (
+                      {vendor.isVerified && (
                         <Badge className="bg-emerald-500 text-white text-xs">
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Verified
                         </Badge>
                       )}
-                      {product.vendor.isPremium && (
+                      {vendor.isPremium && (
                         <Crown className="w-4 h-4 text-yellow-500" />
                       )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-1">
                         <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                        <span>{product.vendor.rating} ({product.vendor.reviewCount})</span>
+                        <span>{vendor.rating} ({vendor.reviewCount})</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
-                        <span>{product.vendor.location}</span>
+                        <span>{vendor.location}</span>
                       </div>
                     </div>
                   </div>
@@ -393,7 +464,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             <div>
               <h3 className="font-semibold text-gray-900 mb-3">Key Features:</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {product.features.map((feature, index) => (
+                {product.features && product.features.map((feature, index) => (
                   <div key={index} className="flex items-center gap-2 text-sm text-gray-600">
                     <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     <span>{feature}</span>
@@ -433,10 +504,11 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               <div className="flex gap-3">
                 <Button 
                   onClick={handleAddToCart}
-                  className="flex-1 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white py-3 text-lg font-semibold"
+                  disabled={!product.inStock}
+                  className="flex-1 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
-                  Add to Cart ({quantity})
+                  {product.inStock ? `Add to Cart (${quantity})` : 'Out of Stock'}
                 </Button>
                 <Button variant="outline" size="icon" className="flex-shrink-0">
                   <Heart className="w-5 h-5" />
@@ -495,7 +567,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               <div className="prose max-w-none">
                 <p className="text-gray-600 mb-4">{product.description}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {product.features.map((feature, index) => (
+                  {product.features && product.features.map((feature, index) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
                       <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                       <span className="text-gray-700">{feature}</span>
@@ -507,7 +579,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
             {activeTab === "specifications" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {Object.entries(product.specifications).map(([key, value]) => (
+                {Object.entries(defaultSpecifications).map(([key, value]) => (
                   <div key={key} className="flex justify-between py-2 border-b border-gray-100">
                     <span className="font-medium text-gray-600 capitalize">
                       {key.replace(/([A-Z])/g, ' $1').trim()}:
@@ -572,14 +644,14 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-xl font-bold text-gray-900">{product.vendor.name}</h3>
-                          {product.vendor.isVerified && (
+                          <h3 className="text-xl font-bold text-gray-900">{vendor.name}</h3>
+                          {vendor.isVerified && (
                             <Badge className="bg-emerald-500 text-white">
                               <CheckCircle className="w-3 h-3 mr-1" />
                               Verified Supplier
                             </Badge>
                           )}
-                          {product.vendor.isPremium && (
+                          {vendor.isPremium && (
                             <Badge className="bg-yellow-500 text-white">
                               <Crown className="w-3 h-3 mr-1" />
                               Premium
@@ -589,11 +661,11 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                         <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                           <div className="flex items-center gap-1">
                             <MapPin className="w-4 h-4" />
-                            <span>{product.vendor.location}</span>
+                            <span>{vendor.location}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                            <span>{product.vendor.rating} ({product.vendor.reviewCount} reviews)</span>
+                            <span>{vendor.rating} ({vendor.reviewCount} reviews)</span>
                           </div>
                         </div>
                         <p className="text-gray-600 mb-4">
@@ -601,7 +673,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                           Specialized in eco-friendly and commercial-grade cleaning products.
                         </p>
                         <div className="flex gap-3">
-                          <Link href={`/vendor/${product.vendor.id}/store`}>
+                          <Link href={`/vendor/${vendor.id}/store`}>
                             <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
                               Visit Store
                             </Button>

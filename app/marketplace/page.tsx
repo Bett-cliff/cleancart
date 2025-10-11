@@ -54,6 +54,7 @@ import { useState, useEffect } from "react"
 import { useCart } from "@/app/contexts/CartContext"
 import FixedNavbar from "@/app/components/FixedNavbar"
 import ProductSearch from "@/app/components/search/ProductSearch"
+import { useRouter } from "next/navigation"
 
 // Enhanced vendors data with more details
 const cleaningVendors = [
@@ -569,6 +570,7 @@ const VendorCard = ({ vendor }: { vendor: any }) => {
 const DealCard = ({ deal }: { deal: any }) => {
   const { addToCart } = useCart()
   const [showNotification, setShowNotification] = useState(false)
+  const router = useRouter()
   
   const progress = (deal.sold / deal.total) * 100
   
@@ -588,10 +590,47 @@ const DealCard = ({ deal }: { deal: any }) => {
       price: deal.price,
       vendor: deal.vendor,
       delivery: deal.delivery,
-      image: deal.image
+      image: "/api/placeholder/200/200"
     })
     setShowNotification(true)
     setTimeout(() => setShowNotification(false), 2000)
+  }
+
+  const handleViewDetails = () => {
+    // Store ALL product data for the specific deal
+    const productData = {
+      id: deal.id,
+      name: deal.name,
+      price: deal.price,
+      originalPrice: deal.originalPrice,
+      discount: deal.discount,
+      description: "Professional-grade cleaning product that effectively removes dirt, grime, and stains. Eco-certified and safe for families and pets.",
+      image: "/api/placeholder/200/200",
+      category: deal.category,
+      rating: deal.rating,
+      reviewCount: deal.reviewCount,
+      features: deal.features,
+      vendor: deal.vendor,
+      inStock: deal.stock === "In stock" || deal.stock === "Only 5 left" || deal.stock === "Only 3 left",
+      sold: deal.sold,
+      total: deal.total,
+      delivery: deal.delivery,
+      coupon: deal.coupon,
+      isAmazonChoice: deal.isAmazonChoice,
+      isBestSeller: deal.isBestSeller
+    }
+    
+    console.log('🛒 Navigating to product:', productData.name)
+    console.log('🛒 Storing product data:', productData)
+    
+    // ✅ FIX: Use 'currentProduct' key instead of 'product-{id}'
+    localStorage.setItem('currentProduct', JSON.stringify(productData))
+    
+    // Verify it was stored
+    const stored = localStorage.getItem('currentProduct')
+    console.log('🛒 Verified localStorage:', stored)
+    
+    router.push(`/product/${deal.id}`)
   }
 
   return (
@@ -612,7 +651,7 @@ const DealCard = ({ deal }: { deal: any }) => {
         {deal.isAmazonChoice && (
           <Badge className="bg-blue-500 text-white text-xs">
             <Crown className="w-3 h-3 mr-1" />
-            EcoClean's Choice
+            CleanCart's Choice
           </Badge>
         )}
         {deal.isBestSeller && (
@@ -629,20 +668,22 @@ const DealCard = ({ deal }: { deal: any }) => {
       </div>
 
       <CardContent className="p-3">
-        <Link href={`/product/${deal.id}`}>
-          <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg mb-3 overflow-hidden border border-gray-200 relative cursor-pointer">
-            <div className={`w-full h-full bg-gradient-to-br ${colors.bg} flex items-center justify-center`}>
-              <Sparkles className="w-8 h-8 text-white" />
-            </div>
-            
-            {/* Stock Status */}
-            <div className="absolute bottom-2 left-2">
-              <Badge variant="secondary" className="text-xs bg-white/90 backdrop-blur-sm">
-                {deal.stock}
-              </Badge>
-            </div>
+        {/* Make the entire image area clickable for view details */}
+        <div 
+          className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg mb-3 overflow-hidden border border-gray-200 relative cursor-pointer"
+          onClick={handleViewDetails}
+        >
+          <div className={`w-full h-full bg-gradient-to-br ${colors.bg} flex items-center justify-center`}>
+            <Sparkles className="w-8 h-8 text-white" />
           </div>
-        </Link>
+          
+          {/* Stock Status */}
+          <div className="absolute bottom-2 left-2">
+            <Badge variant="secondary" className="text-xs bg-white/90 backdrop-blur-sm">
+              {deal.stock}
+            </Badge>
+          </div>
+        </div>
 
         <div className="space-y-2">
           {/* Rating and Reviews */}
@@ -660,11 +701,13 @@ const DealCard = ({ deal }: { deal: any }) => {
             )}
           </div>
 
-          <Link href={`/product/${deal.id}`}>
-            <h3 className="font-medium text-gray-900 text-sm line-clamp-2 group-hover:text-emerald-600 transition-colors cursor-pointer">
-              {deal.name}
-            </h3>
-          </Link>
+          {/* Product Name - Clickable for details */}
+          <h3 
+            className="font-medium text-gray-900 text-sm line-clamp-2 group-hover:text-emerald-600 transition-colors cursor-pointer"
+            onClick={handleViewDetails}
+          >
+            {deal.name}
+          </h3>
           
           <div className="space-y-1">
             {deal.features.slice(0, 2).map((feature: string, index: number) => (
@@ -701,7 +744,7 @@ const DealCard = ({ deal }: { deal: any }) => {
             </div>
           </div>
 
-          {/* Navigation Buttons */}
+          {/* Action Buttons */}
           <div className="flex gap-2">
             <Button 
               onClick={handleAddToCart}
@@ -710,12 +753,14 @@ const DealCard = ({ deal }: { deal: any }) => {
               <ShoppingCart className="w-4 h-4 mr-2" />
               Add to Cart
             </Button>
-            <Link href={`/product/${deal.id}`} className="flex-1">
-              <Button variant="outline" className="w-full text-sm">
-                <Eye className="w-4 h-4 mr-2" />
-                View Details
-              </Button>
-            </Link>
+            <Button 
+              onClick={handleViewDetails}
+              variant="outline" 
+              className="flex-1 text-sm"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View Details
+            </Button>
           </div>
         </div>
       </CardContent>
@@ -726,6 +771,7 @@ const DealCard = ({ deal }: { deal: any }) => {
 // Recently Viewed Component with Cart Integration
 const RecentlyViewedCard = ({ product }: { product: any }) => {
   const { addToCart } = useCart()
+  const router = useRouter()
 
   const handleAddToCart = () => {
     addToCart({
@@ -738,30 +784,68 @@ const RecentlyViewedCard = ({ product }: { product: any }) => {
     })
   }
 
+  const handleViewDetails = () => {
+    const productData = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      vendor: product.vendor,
+      delivery: product.delivery,
+      features: product.features,
+      stock: product.stock,
+      description: "Quality product with excellent performance and reliability.",
+      image: product.image,
+      category: product.type,
+      rating: 4.5,
+      reviewCount: 50,
+      inStock: product.stock === "In stock"
+    }
+    
+    console.log('🛒 Navigating to product:', productData.name)
+    localStorage.setItem('currentProduct', JSON.stringify(productData))
+    router.push(`/product/${product.id}`)
+  }
+
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 bg-white">
       <CardContent className="p-3">
         <div className="flex items-center gap-3">
-          <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div 
+            className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 cursor-pointer"
+            onClick={handleViewDetails}
+          >
             <Sparkles className="w-6 h-6 text-gray-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-medium text-gray-900 text-sm line-clamp-2 group-hover:text-emerald-600 transition-colors mb-1">
+            <h4 
+              className="font-medium text-gray-900 text-sm line-clamp-2 group-hover:text-emerald-600 transition-colors mb-1 cursor-pointer"
+              onClick={handleViewDetails}
+            >
               {product.name}
             </h4>
             <div className="flex items-center justify-between">
               <span className="text-lg font-bold text-emerald-600">KSh {product.price}</span>
               <span className="text-xs text-gray-500">{product.viewedAt}</span>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full mt-2 text-xs"
-              onClick={handleAddToCart}
-            >
-              <ShoppingCart className="w-3 h-3 mr-1" />
-              Add to Cart
-            </Button>
+            <div className="flex gap-2 mt-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="flex-1 text-xs"
+                onClick={handleAddToCart}
+              >
+                <ShoppingCart className="w-3 h-3 mr-1" />
+                Add to Cart
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs"
+                onClick={handleViewDetails}
+              >
+                <Eye className="w-3 h-3" />
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>
@@ -772,7 +856,32 @@ const RecentlyViewedCard = ({ product }: { product: any }) => {
 // NEW: Sponsored Product Card Component
 const SponsoredProductCard = ({ product }: { product: any }) => {
   const { addToCart } = useCart()
+  const router = useRouter()
   
+  const handleViewDetails = () => {
+    const productData = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      discount: product.discount,
+      description: product.description,
+      vendor: product.vendor,
+      rating: product.rating,
+      reviewCount: product.reviewCount,
+      delivery: product.delivery,
+      features: product.features,
+      image: "/api/placeholder/200/200",
+      category: "Sponsored",
+      inStock: true,
+      isSponsored: true
+    }
+    
+    console.log('🛒 Navigating to product:', productData.name)
+    localStorage.setItem('currentProduct', JSON.stringify(productData))
+    router.push(`/product/${product.id}`)
+  }
+
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 relative">
       {/* Sponsored Badge */}
@@ -785,11 +894,17 @@ const SponsoredProductCard = ({ product }: { product: any }) => {
 
       <CardContent className="p-4">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+          <div 
+            className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer"
+            onClick={handleViewDetails}
+          >
             <Crown className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 text-sm">
+            <h3 
+              className="font-semibold text-gray-900 text-sm cursor-pointer"
+              onClick={handleViewDetails}
+            >
               {product.name}
             </h3>
             <div className="flex items-center gap-1">
@@ -823,20 +938,30 @@ const SponsoredProductCard = ({ product }: { product: any }) => {
             <span>Delivery {product.delivery}</span>
           </div>
 
-          <Button 
-            onClick={() => addToCart({
-              id: product.id,
-              name: product.name,
-              price: product.price,
-              vendor: product.vendor,
-              delivery: product.delivery,
-              image: product.image
-            })}
-            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm"
-          >
-            <ShoppingCart className="w-4 h-4 mr-2" />
-            Add to Cart
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => addToCart({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                vendor: product.vendor,
+                delivery: product.delivery,
+                image: product.image
+              })}
+              className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm"
+            >
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              Add to Cart
+            </Button>
+            <Button 
+              onClick={handleViewDetails}
+              variant="outline" 
+              className="flex-1 text-sm"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Details
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -975,16 +1100,44 @@ const SupplierToolsAd = ({ ad }: { ad: any }) => {
 // NEW: Sidebar Product Card Component
 const SidebarProductCard = ({ product }: { product: any }) => {
   const { addToCart } = useCart()
+  const router = useRouter()
+
+  const handleViewDetails = () => {
+    const productData = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      vendor: product.vendor,
+      delivery: product.delivery,
+      rating: product.rating,
+      description: "Popular product with great value and performance.",
+      image: product.image,
+      category: "General",
+      reviewCount: 25,
+      inStock: true,
+      features: ["Quality", "Reliable", "Value"]
+    }
+    
+    console.log('🛒 Navigating to product:', productData.name)
+    localStorage.setItem('currentProduct', JSON.stringify(productData))
+    router.push(`/product/${product.id}`)
+  }
 
   return (
     <Card className="group hover:shadow-md transition-all duration-200 overflow-hidden border border-gray-200 bg-white">
       <CardContent className="p-3">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div 
+            className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 cursor-pointer"
+            onClick={handleViewDetails}
+          >
             <Sparkles className="w-5 h-5 text-gray-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-medium text-gray-900 text-xs line-clamp-2 group-hover:text-emerald-600 transition-colors mb-1">
+            <h4 
+              className="font-medium text-gray-900 text-xs line-clamp-2 group-hover:text-emerald-600 transition-colors mb-1 cursor-pointer"
+              onClick={handleViewDetails}
+            >
               {product.name}
             </h4>
             <div className="flex items-center gap-1 mb-1">
@@ -993,20 +1146,30 @@ const SidebarProductCard = ({ product }: { product: any }) => {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold text-emerald-600">KSh {product.price}</span>
-              <Button 
-                size="sm" 
-                className="h-6 px-2 text-xs"
-                onClick={() => addToCart({
-                  id: product.id,
-                  name: product.name,
-                  price: product.price,
-                  vendor: product.vendor,
-                  delivery: product.delivery,
-                  image: product.image
-                })}
-              >
-                <ShoppingCart className="w-3 h-3" />
-              </Button>
+              <div className="flex gap-1">
+                <Button 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={() => addToCart({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    vendor: product.vendor,
+                    delivery: product.delivery,
+                    image: product.image
+                  })}
+                >
+                  <ShoppingCart className="w-3 h-3" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="h-6 px-2 text-xs"
+                  onClick={handleViewDetails}
+                >
+                  <Eye className="w-3 h-3" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -1133,10 +1296,10 @@ export default function MarketplacePage() {
                 <Leaf className="w-8 h-8 text-white" />
               </div>
             </div>
-            <h1 className="text-4xl font-bold mb-4">EcoClean Kenya</h1>
-            <p className="text-xl mb-6 opacity-90">Kenya's Green Cleaning Supplies Marketplace</p>
+            <h1 className="text-4xl font-bold mb-4">CleanCart Kenya</h1>
+            <p className="text-xl mb-6 opacity-90">Kenya's Smart Shopping Solutions Marketplace</p>
             <p className="text-lg mb-8 opacity-80 max-w-2xl mx-auto">
-              Source eco-friendly cleaning products, equipment, and supplies from verified green suppliers across Kenya
+              Source quality products, equipment, and supplies from verified suppliers across Kenya
             </p>
           </div>
         </div>
@@ -1223,7 +1386,7 @@ export default function MarketplacePage() {
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white px-4 py-2 rounded-full">
                   <Flame className="w-5 h-5" />
-                  <span className="font-bold">GREEN DEALS</span>
+                  <span className="font-bold">FEATURED DEALS</span>
                 </div>
                 <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
                   <Clock className="w-4 h-4" />
@@ -1291,9 +1454,9 @@ export default function MarketplacePage() {
                 {/* Enhanced Categories Section */}
                 <section className="mb-12">
                   <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-3">Green Cleaning Categories</h2>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-3">Product Categories</h2>
                     <p className="text-gray-600 max-w-2xl mx-auto">
-                      Browse our comprehensive range of eco-friendly and sustainable cleaning supplies
+                      Browse our comprehensive range of quality products and supplies
                     </p>
                   </div>
                   
@@ -1335,10 +1498,10 @@ export default function MarketplacePage() {
                   <div className="text-center mb-8">
                     <div className="flex items-center justify-center gap-2 mb-3">
                       <Award className="w-6 h-6 text-emerald-600" />
-                      <h2 className="text-3xl font-bold text-gray-900">Trusted Green Suppliers</h2>
+                      <h2 className="text-3xl font-bold text-gray-900">Trusted Suppliers</h2>
                     </div>
                     <p className="text-gray-600 max-w-2xl mx-auto">
-                      Partner with Kenya's most reliable eco-friendly cleaning products suppliers
+                      Partner with Kenya's most reliable product suppliers
                     </p>
                   </div>
                   
@@ -1354,7 +1517,7 @@ export default function MarketplacePage() {
                   <div className="text-center mb-8">
                     <h2 className="text-3xl font-bold text-gray-900 mb-3">Supplier Success Tools</h2>
                     <p className="text-gray-600 max-w-2xl mx-auto">
-                      Everything you need to grow your cleaning business on our platform
+                      Everything you need to grow your business on our platform
                     </p>
                   </div>
                   
@@ -1375,7 +1538,7 @@ export default function MarketplacePage() {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Link href="/product/commercial-multi-surface-cleaner">
+                    <Link href="/product/1">
                       <Card className="group hover:shadow-lg transition-all cursor-pointer border-emerald-200 hover:border-emerald-300">
                         <CardContent className="p-6 text-center">
                           <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-emerald-200 transition-colors">
@@ -1416,9 +1579,9 @@ export default function MarketplacePage() {
                 {/* 🔥 STRATEGIC AD PLACEMENT 5: Bottom Banner Ad */}
                 <section className="mb-12">
                   <div className="bg-gradient-to-r from-orange-400 to-red-500 rounded-2xl p-8 text-white text-center">
-                    <h2 className="text-3xl font-bold mb-4">Ready to Grow Your Cleaning Business?</h2>
+                    <h2 className="text-3xl font-bold mb-4">Ready to Grow Your Business?</h2>
                     <p className="text-xl mb-6 max-w-2xl mx-auto">
-                      Join hundreds of successful suppliers already selling on EcoClean Kenya
+                      Join hundreds of successful suppliers already selling on CleanCart Kenya
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                       <Button className="bg-white text-orange-600 hover:bg-gray-100 font-semibold px-8 py-3">
@@ -1492,7 +1655,7 @@ export default function MarketplacePage() {
                     <span className="font-semibold">+45% MoM</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Eco Products</span>
+                    <span className="text-gray-600">Products</span>
                     <span className="font-semibold">1,200+</span>
                   </div>
                 </div>
@@ -1556,18 +1719,18 @@ export default function MarketplacePage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
             <div className="flex flex-col items-center">
               <Truck className="w-12 h-12 text-emerald-600 mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Carbon-Neutral Delivery</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">Fast Delivery</h3>
               <p className="text-gray-600 text-sm">Same-day & scheduled delivery options</p>
             </div>
             <div className="flex flex-col items-center">
-              <Leaf className="w-12 h-12 text-emerald-600 mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Eco Certified</h3>
-              <p className="text-gray-600 text-sm">All products meet environmental standards</p>
+              <Shield className="w-12 h-12 text-emerald-600 mb-3" />
+              <h3 className="font-semibold text-gray-900 mb-2">Quality Assured</h3>
+              <p className="text-gray-600 text-sm">All products meet quality standards</p>
             </div>
             <div className="flex flex-col items-center">
               <HeadphonesIcon className="w-12 h-12 text-emerald-600 mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Green Experts</h3>
-              <p className="text-gray-600 text-sm">24/7 professional cleaning advice</p>
+              <h3 className="font-semibold text-gray-900 mb-2">Expert Support</h3>
+              <p className="text-gray-600 text-sm">24/7 professional customer support</p>
             </div>
             <div className="flex flex-col items-center">
               <RotateCcw className="w-12 h-12 text-emerald-600 mb-3" />

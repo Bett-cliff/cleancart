@@ -15,7 +15,7 @@ import {
   Plus,
   Menu
 } from "lucide-react"
-import { useVendorAuth } from "@/context/vendor-auth-context"
+import { useVendorAuth } from "@/hooks/use-vendor-auth"// Fixed import path
 import {
   DropdownMenu,
   DropdownMenuContent,
