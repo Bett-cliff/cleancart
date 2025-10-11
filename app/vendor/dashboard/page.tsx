@@ -1,176 +1,54 @@
+// app/vendor/dashboard/page.tsx - COMPLETE VERSION
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { 
   Package, 
   ShoppingCart, 
-  BarChart3, 
+  BarChart3,
   Users, 
-  TrendingUp, 
   DollarSign,
-  Calendar,
-  ArrowUp,
-  ArrowDown,
+  ArrowLeft,
+  Target,
+  TrendingUp,
+  Star,
   Eye,
   Plus,
   Download,
   RefreshCw,
-  Star,
-  Target,
-  Zap,
   CheckCircle,
-  Clock
+  Clock,
+  Zap
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useVendorDashboard, useRefreshDashboard } from "@/hooks/useVendorDashboard"
 
-// Enhanced mock data with more metrics
-const dashboardData = {
-  stats: [
-    {
-      title: "Total Revenue",
-      value: "KSh 245,231",
-      change: "+12.5%",
-      trend: "up",
-      icon: DollarSign,
-      description: "Last 30 days",
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-      progress: 75
-    },
-    {
-      title: "Total Orders",
-      value: "1,234",
-      change: "+8.2%",
-      trend: "up",
-      icon: ShoppingCart,
-      description: "24 pending",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      progress: 60
-    },
-    {
-      title: "Products Sold",
-      value: "892",
-      change: "+15.3%",
-      trend: "up",
-      icon: Package,
-      description: "156 in stock",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-      progress: 85
-    },
-    {
-      title: "New Customers",
-      value: "156",
-      change: "+22.1%",
-      trend: "up",
-      icon: Users,
-      description: "42% returning",
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-      progress: 90
-    }
-  ],
-  performanceMetrics: [
-    { 
-      label: "Conversion Rate", 
-      value: "3.2%", 
-      change: "+0.5%",
-      target: "4.0%",
-      progress: 80,
-      icon: Target,
-      color: "text-green-600",
-      bgColor: "bg-green-50"
-    },
-    { 
-      label: "Avg. Order Value", 
-      value: "KSh 2,450", 
-      change: "+KSh 120",
-      target: "KSh 3,000",
-      progress: 82,
-      icon: TrendingUp,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50"
-    },
-    { 
-      label: "Customer Satisfaction", 
-      value: "4.8/5", 
-      change: "+0.2",
-      target: "5.0/5",
-      progress: 96,
-      icon: Star,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50"
-    }
-  ],
-  recentActivity: [
-    {
-      id: 1,
-      type: "order",
-      message: "New order #ORD-0012 received",
-      time: "5 minutes ago",
-      amount: "KSh 4,250",
-      status: "success",
-      icon: ShoppingCart
-    },
-    {
-      id: 2,
-      type: "product",
-      message: "Product 'Organic Soap' is low in stock",
-      time: "1 hour ago",
-      amount: null,
-      status: "warning",
-      icon: Package
-    },
-    {
-      id: 3,
-      type: "customer",
-      message: "New customer registration - Sarah M.",
-      time: "2 hours ago",
-      amount: null,
-      status: "info",
-      icon: Users
-    },
-    {
-      id: 4,
-      type: "order",
-      message: "Order #ORD-0011 marked as delivered",
-      time: "3 hours ago",
-      amount: "KSh 8,750",
-      status: "success",
-      icon: CheckCircle
-    },
-    {
-      id: 5,
-      type: "review",
-      message: "New 5-star review received",
-      time: "4 hours ago",
-      amount: null,
-      status: "success",
-      icon: Star
-    }
-  ],
-  topProducts: [
-    { name: "Organic Lavender Soap", sales: 45, revenue: "KSh 67,500" },
-    { name: "Bamboo Toothbrush Set", sales: 32, revenue: "KSh 25,600" },
-    { name: "Natural Deodorant", sales: 28, revenue: "KSh 22,400" },
-    { name: "Reusable Coffee Cup", sales: 21, revenue: "KSh 31,500" }
-  ],
-  salesData: [
-    { day: "Mon", sales: 12, revenue: 18500 },
-    { day: "Tue", sales: 18, revenue: 26700 },
-    { day: "Wed", sales: 15, revenue: 22500 },
-    { day: "Thu", sales: 22, revenue: 34100 },
-    { day: "Fri", sales: 25, revenue: 41200 },
-    { day: "Sat", sales: 30, revenue: 49500 },
-    { day: "Sun", sales: 24, revenue: 37800 }
-  ]
+// Progress bar component
+const ProgressBar = ({ percentage, color = "bg-green-500" }: { percentage: number; color?: string }) => {
+  return (
+    <div className="w-full bg-gray-200 rounded-full h-2">
+      <div
+        className={`h-2 rounded-full ${color} transition-all duration-500`}
+        style={{ width: `${percentage}%` }}
+      />
+    </div>
+  )
 }
 
-// Simple bar chart component for revenue visualization
+// Revenue chart component
 const RevenueChart = ({ data }: { data: any[] }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-48 text-gray-500">
+        No sales data available
+      </div>
+    )
+  }
+
   const maxRevenue = Math.max(...data.map(d => d.revenue))
   
   return (
@@ -194,83 +72,243 @@ const RevenueChart = ({ data }: { data: any[] }) => {
   )
 }
 
-// Progress bar component
-const ProgressBar = ({ percentage, color = "bg-green-500" }: { percentage: number; color?: string }) => {
-  return (
-    <div className="w-full bg-gray-200 rounded-full h-2">
-      <div
-        className={`h-2 rounded-full ${color} transition-all duration-500`}
-        style={{ width: `${percentage}%` }}
-      />
+// Loading skeleton for chart
+const ChartSkeleton = () => (
+  <div className="space-y-6">
+    <div className="flex items-end justify-between h-48 gap-2 pt-4">
+      {[...Array(7)].map((_, i) => (
+        <div key={i} className="flex flex-col items-center flex-1">
+          <Skeleton className="h-3 w-8 mb-2" />
+          <Skeleton className="w-full h-32 rounded-t-lg" />
+          <Skeleton className="h-3 w-12 mt-2" />
+        </div>
+      ))}
     </div>
-  )
-}
+  </div>
+)
 
 export default function VendorDashboard() {
-  const { stats, performanceMetrics, recentActivity, topProducts, salesData } = dashboardData
+  const router = useRouter()
+  const { data: dashboardData, isLoading, error } = useVendorDashboard()
+  const { refresh } = useRefreshDashboard()
+
+  const handleBack = () => {
+    router.push("/")
+  }
+
+  const handleRefresh = () => {
+    refresh()
+  }
+
+  const handleExport = () => {
+    // TODO: Implement export functionality
+    console.log("Export dashboard data")
+  }
+
+  // Format currency for display
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      minimumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  // Format number with commas
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('en-KE').format(num)
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Dashboard</h2>
+          <p className="text-gray-600 mb-4">Failed to load dashboard data. Please try again.</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Prepare stats data for display
+  const statsData = dashboardData ? [
+    {
+      title: "Total Revenue",
+      value: formatCurrency(dashboardData.stats.totalRevenue),
+      change: "+12.5%",
+      trend: "up" as const,
+      icon: DollarSign,
+      description: "Last 30 days",
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+      progress: 75
+    },
+    {
+      title: "Total Orders",
+      value: formatNumber(dashboardData.stats.totalOrders),
+      change: "+8.2%",
+      trend: "up" as const,
+      icon: ShoppingCart,
+      description: `${dashboardData.stats.pendingOrders} pending`,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
+      progress: 60
+    },
+    {
+      title: "Products Sold",
+      value: formatNumber(dashboardData.stats.productsSold),
+      change: "+15.3%",
+      trend: "up" as const,
+      icon: Package,
+      description: `${dashboardData.stats.lowStockProducts} low stock`,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
+      progress: 85
+    },
+    {
+      title: "New Customers",
+      value: formatNumber(dashboardData.stats.newCustomers),
+      change: "+22.1%",
+      trend: "up" as const,
+      icon: Users,
+      description: "42% returning",
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
+      progress: 90
+    }
+  ] : []
+
+  // Prepare performance metrics for display
+  const performanceMetricsData = dashboardData ? [
+    { 
+      label: "Conversion Rate", 
+      value: `${dashboardData.performanceMetrics.conversionRate}%`, 
+      change: "+0.5%",
+      target: "4.0%",
+      progress: (dashboardData.performanceMetrics.conversionRate / 4.0) * 100,
+      icon: Target,
+      color: "text-green-600",
+      bgColor: "bg-green-50"
+    },
+    { 
+      label: "Avg. Order Value", 
+      value: formatCurrency(dashboardData.performanceMetrics.averageOrderValue), 
+      change: "+KSh 120",
+      target: "KSh 3,000",
+      progress: (dashboardData.performanceMetrics.averageOrderValue / 3000) * 100,
+      icon: TrendingUp,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50"
+    },
+    { 
+      label: "Customer Satisfaction", 
+      value: `${dashboardData.performanceMetrics.customerSatisfaction}/5`, 
+      change: "+0.2",
+      target: "5.0/5",
+      progress: (dashboardData.performanceMetrics.customerSatisfaction / 5) * 100,
+      icon: Star,
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-50"
+    }
+  ] : []
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Back Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Business Dashboard</h1>
-          <p className="text-gray-600 mt-1">Welcome back! Here's your performance overview.</p>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Store
+          </Button>
+          <div className="border-l border-gray-300 h-6"></div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Business Dashboard</h1>
+            <p className="text-gray-600 mt-1">Welcome back! Here's your performance overview.</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={handleExport}
+            disabled={isLoading}
+          >
             <Download className="w-4 h-4" />
             Export Report
           </Button>
-          <Button variant="outline" className="flex items-center gap-2">
-            <RefreshCw className="w-4 h-4" />
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
       </div>
 
       {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon
-          const isPositive = stat.trend === "up"
-          
-          return (
-            <Card key={index} className="relative overflow-hidden group hover:shadow-lg transition-all duration-300">
-              <div className={`absolute top-0 left-0 w-1 h-full ${stat.bgColor.replace('bg-', 'bg-')}`} />
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="relative overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  {stat.title}
-                </CardTitle>
-                <div className={`p-2 rounded-lg ${stat.bgColor} ${stat.color} group-hover:scale-110 transition-transform`}>
-                  <Icon className="w-4 h-4" />
-                </div>
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-8 rounded-lg" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <div className={`flex items-center gap-1 text-xs font-medium ${
-                      isPositive ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {isPositive ? (
-                        <ArrowUp className="w-3 h-3" />
-                      ) : (
-                        <ArrowDown className="w-3 h-3" />
-                      )}
-                      {stat.change}
-                    </div>
-                    <span className="text-xs text-gray-500 ml-2">{stat.description}</span>
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <ProgressBar percentage={stat.progress} color={stat.bgColor.replace('bg-', 'bg-').replace('-50', '-500')} />
-                </div>
+                <Skeleton className="h-7 w-32 mb-2" />
+                <Skeleton className="h-3 w-full mt-3" />
               </CardContent>
             </Card>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {statsData.map((stat, index) => {
+            const Icon = stat.icon
+            const isPositive = stat.trend === "up"
+            
+            return (
+              <Card key={index} className="relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+                <div className={`absolute top-0 left-0 w-1 h-full ${stat.bgColor}`} />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">
+                    {stat.title}
+                  </CardTitle>
+                  <div className={`p-2 rounded-lg ${stat.bgColor} ${stat.color} group-hover:scale-110 transition-transform`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <div className={`flex items-center gap-1 text-xs font-medium ${
+                        isPositive ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {isPositive ? '↗' : '↘'}
+                        {stat.change}
+                      </div>
+                      <span className="text-xs text-gray-500 ml-2">{stat.description}</span>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <ProgressBar percentage={stat.progress} color={stat.bgColor.replace('bg-', 'bg-').replace('-50', '-500')} />
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
@@ -285,17 +323,27 @@ export default function VendorDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RevenueChart data={salesData} />
-            <div className="grid grid-cols-2 gap-4 mt-6">
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">28</div>
-                <div className="text-sm text-green-700">Avg. Daily Sales</div>
-              </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">KSh 32,400</div>
-                <div className="text-sm text-blue-700">Avg. Daily Revenue</div>
-              </div>
-            </div>
+            {isLoading ? (
+              <ChartSkeleton />
+            ) : dashboardData ? (
+              <>
+                <RevenueChart data={dashboardData.salesData} />
+                <div className="grid grid-cols-2 gap-4 mt-6">
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">
+                      {dashboardData.salesData ? Math.round(dashboardData.salesData.reduce((acc, day) => acc + day.sales, 0) / dashboardData.salesData.length) : 0}
+                    </div>
+                    <div className="text-sm text-green-700">Avg. Daily Sales</div>
+                  </div>
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {dashboardData.salesData ? formatCurrency(Math.round(dashboardData.salesData.reduce((acc, day) => acc + day.revenue, 0) / dashboardData.salesData.length)) : formatCurrency(0)}
+                    </div>
+                    <div className="text-sm text-blue-700">Avg. Daily Revenue</div>
+                  </div>
+                </div>
+              </>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -311,29 +359,45 @@ export default function VendorDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {performanceMetrics.map((metric, index) => {
-              const Icon = metric.icon
-              return (
-                <div key={index} className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+            {isLoading ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="p-4 rounded-lg border border-gray-200">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className={`p-2 rounded-lg ${metric.bgColor} ${metric.color}`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">{metric.label}</span>
-                    </div>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      {metric.change}
-                    </Badge>
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-5 w-16" />
                   </div>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
-                    <div className="text-sm text-gray-500">Target: {metric.target}</div>
+                    <Skeleton className="h-6 w-20" />
+                    <Skeleton className="h-3 w-24" />
                   </div>
-                  <ProgressBar percentage={metric.progress} />
+                  <Skeleton className="h-2 w-full" />
                 </div>
-              )
-            })}
+              ))
+            ) : (
+              performanceMetricsData.map((metric, index) => {
+                const Icon = metric.icon
+                return (
+                  <div key={index} className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-2 rounded-lg ${metric.bgColor} ${metric.color}`}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">{metric.label}</span>
+                      </div>
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        {metric.change}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
+                      <div className="text-sm text-gray-500">Target: {metric.target}</div>
+                    </div>
+                    <ProgressBar percentage={metric.progress} />
+                  </div>
+                )
+              })
+            )}
           </CardContent>
         </Card>
       </div>
@@ -351,39 +415,60 @@ export default function VendorDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentActivity.map((activity) => {
-                const Icon = activity.icon
-                const statusConfig = {
-                  success: { color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200" },
-                  warning: { color: "text-yellow-600", bgColor: "bg-yellow-50", borderColor: "border-yellow-200" },
-                  info: { color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" }
-                }
-                const config = statusConfig[activity.status as keyof typeof statusConfig]
-                
-                return (
-                  <div key={activity.id} className={`flex items-start justify-between p-4 rounded-lg border ${config.borderColor} ${config.bgColor} hover:shadow-sm transition-all`}>
+            {isLoading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-start justify-between p-4 rounded-lg border border-gray-200">
                     <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg ${config.bgColor} ${config.color}`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
+                      <Skeleton className="h-8 w-8 rounded-lg" />
                       <div>
-                        <p className="font-medium text-gray-900">{activity.message}</p>
-                        <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {activity.time}
-                        </p>
+                        <Skeleton className="h-4 w-48 mb-2" />
+                        <Skeleton className="h-3 w-24" />
                       </div>
                     </div>
-                    {activity.amount && (
-                      <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
-                        {activity.amount}
-                      </Badge>
-                    )}
+                    <Skeleton className="h-5 w-16" />
                   </div>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            ) : dashboardData ? (
+              <div className="space-y-4">
+                {dashboardData.recentActivity.map((activity) => {
+                  const getActivityConfig = (status: string) => {
+                    const config = {
+                      success: { color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200", icon: CheckCircle },
+                      warning: { color: "text-yellow-600", bgColor: "bg-yellow-50", borderColor: "border-yellow-200", icon: Package },
+                      info: { color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200", icon: Users }
+                    }
+                    return config[status as keyof typeof config] || config.info
+                  }
+                  
+                  const config = getActivityConfig(activity.status)
+                  const Icon = config.icon
+                  
+                  return (
+                    <div key={activity.id} className={`flex items-start justify-between p-4 rounded-lg border ${config.borderColor} ${config.bgColor} hover:shadow-sm transition-all`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${config.bgColor} ${config.color}`}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{activity.message}</p>
+                          <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {activity.time}
+                          </p>
+                        </div>
+                      </div>
+                      {activity.amount && (
+                        <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
+                          {formatCurrency(activity.amount)}
+                        </Badge>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : null}
             <Button variant="ghost" className="w-full mt-4 text-green-600 hover:text-green-700 hover:bg-green-50">
               View All Activity
             </Button>
@@ -404,20 +489,37 @@ export default function VendorDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {topProducts.map((product, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900 text-sm">{product.name}</p>
-                      <p className="text-xs text-gray-500">{product.sales} units sold</p>
+              {isLoading ? (
+                <div className="space-y-4">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-32 mb-1" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                      <div className="text-right">
+                        <Skeleton className="h-4 w-16 mb-1" />
+                        <Skeleton className="h-3 w-12" />
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900 text-sm">{product.revenue}</p>
-                      <p className="text-xs text-green-600">+{Math.floor(Math.random() * 20) + 5}%</p>
+                  ))}
+                </div>
+              ) : dashboardData ? (
+                <div className="space-y-4">
+                  {dashboardData.topProducts.map((product, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 text-sm">{product.name}</p>
+                        <p className="text-xs text-gray-500">{product.sales} units sold</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-gray-900 text-sm">{formatCurrency(product.revenue)}</p>
+                        <p className="text-xs text-green-600">+{Math.floor(Math.random() * 20) + 5}%</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
