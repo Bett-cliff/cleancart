@@ -1,7 +1,7 @@
 // app/api/vendor/dashboard/route.ts
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server';
 
-// Mock data - replace with actual database queries
+// Mock data for development
 const mockDashboardData = {
   stats: {
     totalRevenue: 245231,
@@ -73,78 +73,80 @@ const mockDashboardData = {
     { day: "Sat", sales: 30, revenue: 49500 },
     { day: "Sun", sales: 24, revenue: 37800 }
   ]
-}
+};
 
-// Helper function to authenticate vendor
+// Simple authentication helper - accept any token for development
 async function authenticateVendor(request: NextRequest) {
-  // Get token from header
-  const authHeader = request.headers.get('authorization')
-  const token = authHeader?.replace('Bearer ', '')
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
 
-  if (!token) {
-    return null
+  // For development, accept any token
+  if (token) {
+    try {
+      // Mock vendor authentication - accept any valid token format
+      const vendor = { 
+        id: '1', 
+        name: 'Demo Vendor', 
+        email: 'demo@vendor.com',
+        storeId: 'store-123' 
+      };
+      return vendor;
+    } catch (error) {
+      return null;
+    }
   }
 
-  // Verify token - in real app, you'd verify JWT or session
-  // This is a mock implementation
-  try {
-    // In production, verify JWT token here
-    // const vendor = await verifyToken(token)
-    const vendor = { id: '1', name: 'Demo Vendor', storeId: 'store-123' }
-    return vendor
-  } catch (error) {
-    return null
-  }
+  // If no token, still return mock vendor for development
+  const vendor = { 
+    id: '1', 
+    name: 'Demo Vendor', 
+    email: 'demo@vendor.com',
+    storeId: 'store-123' 
+  };
+  return vendor;
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // Authenticate vendor
-    const vendor = await authenticateVendor(request)
+    // Check authentication
+    const vendor = await authenticateVendor(request);
     if (!vendor) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url)
-    const range = searchParams.get('range') || '30d'
-
-    // In production, you would fetch real data based on the vendor ID and time range
-    // const dashboardData = await fetchVendorDashboardData(vendor.id, range)
-    
-    // For now, return mock data
-    return NextResponse.json(mockDashboardData)
+    // Return mock data for now
+    return NextResponse.json({ data: mockDashboardData });
 
   } catch (error) {
-    console.error('Dashboard API error:', error)
+    console.error('Dashboard API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
-    )
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Authenticate vendor
-    const vendor = await authenticateVendor(request)
+    // Check authentication
+    const vendor = await authenticateVendor(request);
     if (!vendor) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Refresh dashboard data
-    // In production, you might clear cache or trigger data refresh
+    // Return refreshed mock data
     const refreshedData = {
       ...mockDashboardData,
       refreshedAt: new Date().toISOString()
-    }
+    };
 
-    return NextResponse.json(refreshedData)
+    return NextResponse.json({ data: refreshedData });
 
   } catch (error) {
-    console.error('Dashboard refresh error:', error)
+    console.error('Dashboard refresh error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
-    )
+    );
   }
 }

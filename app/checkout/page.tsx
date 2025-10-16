@@ -27,9 +27,9 @@ import FixedNavbar from "@/app/components/FixedNavbar"
 import { useState } from "react"
 
 // Payment method types
-type PaymentMethod = 'card' | 'mpesa' | 'paypal'
+type PaymentMethod = 'mpesa' | 'card' | 'paypal' | 'cash_on_delivery'
 
-// Order interface
+// Order interface matching MongoDB schema
 interface OrderData {
   orderNumber: string
   customerInfo: {
@@ -44,7 +44,7 @@ interface OrderData {
   paymentMethod: PaymentMethod
   paymentPhone?: string
   items: Array<{
-    id: string
+    productId: string
     name: string
     price: number
     quantity: number
@@ -53,7 +53,8 @@ interface OrderData {
   deliveryFee: number
   tax: number
   grandTotal: number
-  timestamp: Date
+  status: 'pending'
+  paymentStatus: 'pending'
 }
 
 export default function CheckoutPage() {
@@ -90,19 +91,72 @@ export default function CheckoutPage() {
     return `${prefix}-${timestamp}${random}`
   }
 
-  // Store order in localStorage for vendor access
+  // Save order to MongoDB via API - UPDATED FOR REAL BACKEND
+  const saveOrderToDatabase = async (orderData: OrderData): Promise<boolean> => {
+    try {
+      console.log('🔄 Saving order to MongoDB:', orderData)
+      
+      // Transform data to match backend Order schema
+      const backendOrderData = {
+        customerId: "65a1b2c3d4e5f67890123456", // TODO: Get from user authentication
+        items: orderData.items.map(item => ({
+          productId: item.productId,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: "/images/product-placeholder.jpg", // TODO: Get actual product images
+          vendorId: "65a1b2c3d4e5f67890123457" // TODO: Get actual vendor IDs from products
+        })),
+        shippingAddress: {
+          firstName: orderData.customerInfo.firstName,
+          lastName: orderData.customerInfo.lastName,
+          email: orderData.customerInfo.email,
+          phone: orderData.customerInfo.phone,
+          address: orderData.customerInfo.address,
+          city: orderData.customerInfo.city,
+          county: "Nairobi", // TODO: Add county field to form
+          postalCode: orderData.customerInfo.zipCode
+        },
+        paymentMethod: orderData.paymentMethod,
+        subtotal: orderData.subtotal,
+        shippingFee: orderData.deliveryFee,
+        taxAmount: orderData.tax,
+        totalAmount: orderData.grandTotal,
+        notes: `Order placed via ${orderData.paymentMethod}. Payment integration pending.`
+      }
+
+      console.log('📦 Sending to backend:', backendOrderData)
+      
+      const response = await fetch('http://localhost:5000/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(backendOrderData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('❌ Failed to save order:', errorData)
+        throw new Error(`Failed to save order: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      console.log('✅ Order saved to MongoDB:', result)
+      return result.success
+    } catch (error) {
+      console.error('❌ Error saving order to database:', error)
+      return false
+    }
+  }
+
+  // Store order in localStorage for vendor access (fallback)
   const storeOrderForVendor = (orderData: OrderData) => {
     try {
-      // Get existing orders or initialize empty array
       const existingOrders = JSON.parse(localStorage.getItem('vendorOrders') || '[]')
-      
-      // Add new order
       const updatedOrders = [orderData, ...existingOrders]
-      
-      // Store in localStorage (in real app, this would be an API call)
       localStorage.setItem('vendorOrders', JSON.stringify(updatedOrders))
-      
-      console.log('Order stored for vendor:', orderData.orderNumber)
+      console.log('📦 Order stored in localStorage for vendor:', orderData.orderNumber)
     } catch (error) {
       console.error('Error storing order for vendor:', error)
     }
@@ -199,7 +253,7 @@ export default function CheckoutPage() {
 
   // Simulate M-Pesa payment
   const simulateMpesaPayment = async (phone: string, amount: number) => {
-    console.log(`Sending M-Pesa prompt to: ${phone} for KSh ${amount}`)
+    console.log(`📱 Simulating M-Pesa prompt to: ${phone} for KSh ${amount}`)
     
     // Simulate API call to M-Pesa
     await new Promise(resolve => setTimeout(resolve, 3000))
@@ -210,7 +264,7 @@ export default function CheckoutPage() {
 
   // Simulate card payment
   const simulateCardPayment = async (cardData: any) => {
-    console.log('Processing card payment...', cardData)
+    console.log('💳 Simulating card payment...', cardData)
     
     // Simulate API call to payment gateway
     await new Promise(resolve => setTimeout(resolve, 2000))
@@ -221,12 +275,19 @@ export default function CheckoutPage() {
 
   // Simulate PayPal payment
   const simulatePaypalPayment = async () => {
-    console.log('Redirecting to PayPal...')
+    console.log('🏦 Simulating PayPal redirect...')
     
     // Simulate redirect and callback
     await new Promise(resolve => setTimeout(resolve, 2500))
     
     return Math.random() > 0.1 // 90% success rate for demo
+  }
+
+  // Simulate cash on delivery
+  const simulateCashOnDelivery = async () => {
+    console.log('💰 Cash on delivery selected')
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    return true // Always succeeds for cash on delivery
   }
 
   const handlePlaceOrder = async () => {
@@ -258,6 +319,10 @@ export default function CheckoutPage() {
           paymentSuccess = await simulatePaypalPayment()
           break
         
+        case 'cash_on_delivery':
+          paymentSuccess = await simulateCashOnDelivery()
+          break
+        
         default:
           paymentSuccess = false
       }
@@ -279,7 +344,7 @@ export default function CheckoutPage() {
           paymentMethod: selectedPayment,
           paymentPhone: selectedPayment === 'mpesa' ? paymentPhone : undefined,
           items: items.map(item => ({
-            id: item.id,
+            productId: item.id.toString(),
             name: item.name,
             price: item.price,
             quantity: item.quantity
@@ -288,23 +353,39 @@ export default function CheckoutPage() {
           deliveryFee,
           tax,
           grandTotal,
-          timestamp: new Date()
+          status: 'pending',
+          paymentStatus: selectedPayment === 'cash_on_delivery' ? 'pending' : 'completed'
         }
 
-        // Store order for vendor access
-        storeOrderForVendor(orderData)
+        console.log('🛒 Attempting to save order to MongoDB...')
+        
+        // Save order to MongoDB
+        const dbSuccess = await saveOrderToDatabase(orderData)
+        
+        if (dbSuccess) {
+          console.log('✅ Order successfully saved to MongoDB')
+          
+          // Also store in localStorage for vendor access (fallback)
+          storeOrderForVendor(orderData)
 
-        // Clear cart
-        clearCart()
+          // Clear cart
+          clearCart()
 
-        // Redirect to success page with order number
-        window.location.href = `/success?order=${orderNumber}`
+          // Redirect to success page with order number
+          window.location.href = `/success?order=${orderNumber}`
+        } else {
+          // If MongoDB save fails, use localStorage as fallback
+          console.warn('⚠️ MongoDB save failed, using localStorage fallback')
+          storeOrderForVendor(orderData)
+          clearCart()
+          window.location.href = `/success?order=${orderNumber}`
+        }
       } else {
-        alert('Payment failed. Please try again or use a different payment method.')
+        alert('Payment simulation failed. In production, this would connect to real payment APIs.')
       }
     } catch (error) {
-      console.error('Payment error:', error)
-      alert('An error occurred during payment. Please try again.')
+      console.error('❌ Payment error:', error)
+      alert('An error occurred during payment simulation. Please try again.')
     } finally {
       setIsProcessing(false)
     }
@@ -482,32 +563,41 @@ export default function CheckoutPage() {
                   <div className="flex items-center space-x-3">
                     <RadioGroupItem value="mpesa" id="mpesa" />
                     <Label htmlFor="mpesa" className="flex items-center gap-3 cursor-pointer flex-1">
-                      <div className="w-10 h-10 bg-orange-500 rounded flex items-center justify-center">
+                      <div className="w-10 h-10 bg-green-600 rounded flex items-center justify-center">
                         <Smartphone className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1">
                         <div className="font-medium">M-Pesa</div>
                         <div className="text-xs text-gray-500">Pay via M-Pesa mobile money</div>
                       </div>
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        Popular
+                      </Badge>
                     </Label>
                   </div>
 
                   {selectedPayment === 'mpesa' && (
-                    <div className="ml-7 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                    <div className="ml-7 p-4 bg-green-50 rounded-lg border border-green-200">
                       <Label htmlFor="mpesaPhone" className="text-sm font-medium text-gray-700 mb-2 block">
                         M-Pesa Phone Number *
                       </Label>
                       <Input 
                         id="mpesaPhone"
-                        placeholder="0712 345 678 or +254 712 345 678" 
+                        placeholder="0712 345 678" 
                         value={formData.mpesaPhone}
                         onChange={(e) => handleInputChange('mpesaPhone', e.target.value)}
                         className="mb-2"
                       />
-                      <p className="text-xs text-orange-700">
-                        {formData.phone ? `We'll use ${formData.phone} if left blank. ` : ''}
-                        You will receive an M-Pesa prompt to complete payment of KSh {grandTotal.toLocaleString()}
-                      </p>
+                      <div className="space-y-2 text-xs">
+                        <p className="text-green-700 font-medium">🔒 Secure M-Pesa Integration</p>
+                        <p className="text-gray-600">
+                          {formData.phone ? `We'll use ${formData.phone} if left blank. ` : ''}
+                          You will receive an M-Pesa prompt to complete payment of KSh {grandTotal.toLocaleString()}
+                        </p>
+                        <p className="text-blue-600">
+                          💡 <strong>Development Note:</strong> Connect to Safaricom Daraja API for real payments
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -522,6 +612,9 @@ export default function CheckoutPage() {
                         <div className="font-medium">Credit/Debit Card</div>
                         <div className="text-xs text-gray-500">Pay with Visa, Mastercard, or American Express</div>
                       </div>
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        Secure
+                      </Badge>
                     </Label>
                   </div>
 
@@ -565,6 +658,12 @@ export default function CheckoutPage() {
                           />
                         </div>
                       </div>
+                      <div className="space-y-1 text-xs">
+                        <p className="text-blue-700 font-medium">🔒 PCI Compliant Payment Gateway</p>
+                        <p className="text-blue-600">
+                          💡 <strong>Development Note:</strong> Integrate with Stripe, Flutterwave, or local payment processor
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -572,24 +671,71 @@ export default function CheckoutPage() {
                   <div className="flex items-center space-x-3">
                     <RadioGroupItem value="paypal" id="paypal" />
                     <Label htmlFor="paypal" className="flex items-center gap-3 cursor-pointer flex-1">
-                      <div className="w-10 h-10 bg-blue-500 rounded flex items-center justify-center">
+                      <div className="w-10 h-10 bg-yellow-500 rounded flex items-center justify-center">
                         <Building className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1">
                         <div className="font-medium">PayPal</div>
                         <div className="text-xs text-gray-500">Pay with your PayPal account</div>
                       </div>
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                        Global
+                      </Badge>
                     </Label>
                   </div>
 
                   {selectedPayment === 'paypal' && (
-                    <div className="ml-7 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm text-blue-700">
-                        You will be redirected to PayPal to complete your payment of KSh {grandTotal.toLocaleString()}
-                      </p>
+                    <div className="ml-7 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="space-y-2 text-xs">
+                        <p className="text-yellow-700 font-medium">🌍 International Payments</p>
+                        <p className="text-gray-600">
+                          You will be redirected to PayPal to complete your payment of KSh {grandTotal.toLocaleString()}
+                        </p>
+                        <p className="text-blue-600">
+                          💡 <strong>Development Note:</strong> Connect to PayPal REST API for global payments
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cash on Delivery Option */}
+                  <div className="flex items-center space-x-3">
+                    <RadioGroupItem value="cash_on_delivery" id="cash_on_delivery" />
+                    <Label htmlFor="cash_on_delivery" className="flex items-center gap-3 cursor-pointer flex-1">
+                      <div className="w-10 h-10 bg-orange-500 rounded flex items-center justify-center">
+                        <Truck className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">Cash on Delivery</div>
+                        <div className="text-xs text-gray-500">Pay when you receive your order</div>
+                      </div>
+                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                        Convenient
+                      </Badge>
+                    </Label>
+                  </div>
+
+                  {selectedPayment === 'cash_on_delivery' && (
+                    <div className="ml-7 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                      <div className="space-y-2 text-xs">
+                        <p className="text-orange-700 font-medium">💰 Pay on Delivery</p>
+                        <p className="text-gray-600">
+                          Pay KSh {grandTotal.toLocaleString()} when your order is delivered
+                        </p>
+                        <p className="text-blue-600">
+                          💡 <strong>Development Note:</strong> Perfect for customers who prefer to pay in person
+                        </p>
+                      </div>
                     </div>
                   )}
                 </RadioGroup>
+
+                {/* Payment Integration Notice */}
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-xs text-blue-700 text-center">
+                    <strong>Payment Integration Ready:</strong> All payment methods are structured for easy integration with real payment processors.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>

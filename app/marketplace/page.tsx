@@ -50,11 +50,13 @@ import {
   Calculator
 } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useCart } from "@/app/contexts/CartContext"
 import FixedNavbar from "@/app/components/FixedNavbar"
 import ProductSearch from "@/app/components/search/ProductSearch"
 import { useRouter } from "next/navigation"
+import { fetchProducts, type Product as ApiProduct } from "@/lib/api"
 
 // Enhanced vendors data with more details
 const cleaningVendors = [
@@ -138,185 +140,6 @@ const cleaningCategories = [
   { name: "Equipment & Tools", icon: Wrench, color: "text-cyan-600", bgColor: "bg-cyan-50", count: "203 products", trending: false },
   { name: "Commercial Grade", icon: Award, color: "text-violet-600", bgColor: "bg-violet-50", count: "45 products", trending: true },
   { name: "Eco-Friendly", icon: Leaf, color: "text-emerald-600", bgColor: "bg-emerald-50", count: "76 products", trending: true }
-]
-
-// Enhanced deals with more features
-const allCleaningDeals = [
-  { 
-    id: 1, 
-    name: "Multi-Surface Cleaner 5L - Professional Grade", 
-    originalPrice: 2500, 
-    price: 1899, 
-    discount: 24, 
-    image: "/api/placeholder/200/200", 
-    sold: 78, 
-    total: 150,
-    features: ["5L Concentrate", "All Surfaces", "Professional Grade", "Eco Certified"],
-    type: "Cleaner",
-    category: "All-Purpose Cleaners",
-    rating: 4.8,
-    reviewCount: 124,
-    delivery: "Tomorrow",
-    vendor: "Sparkle Pro Clean",
-    isAmazonChoice: true,
-    isBestSeller: false,
-    stock: "In stock",
-    coupon: "SAVE100"
-  },
-  { 
-    id: 2, 
-    name: "Hospital-Grade Disinfectant Spray", 
-    originalPrice: 3200, 
-    price: 2299, 
-    discount: 28, 
-    image: "/api/placeholder/200/200", 
-    sold: 145, 
-    total: 200,
-    features: ["Kills 99.9% Germs", "5L Bottle", "Fast Acting", "No Rinse"],
-    type: "Disinfectant",
-    category: "Disinfectants",
-    rating: 4.9,
-    reviewCount: 89,
-    delivery: "Today",
-    vendor: "Eco Clean Solutions",
-    isAmazonChoice: false,
-    isBestSeller: true,
-    stock: "Only 5 left",
-    coupon: "CLEAN15"
-  },
-  { 
-    id: 3, 
-    name: "Professional Microfiber Cloth Set", 
-    originalPrice: 1800, 
-    price: 1299, 
-    discount: 28, 
-    image: "/api/placeholder/200/200", 
-    sold: 234, 
-    total: 300,
-    features: ["24 Pieces", "Lint-Free", "Streak-Free", "Machine Washable"],
-    type: "Equipment",
-    category: "Equipment & Tools",
-    rating: 4.7,
-    reviewCount: 267,
-    delivery: "Tomorrow",
-    vendor: "Industrial Clean KE",
-    isAmazonChoice: true,
-    isBestSeller: true,
-    stock: "In stock",
-    coupon: null
-  },
-  { 
-    id: 4, 
-    name: "Floor Polish & Cleaner Concentrate", 
-    originalPrice: 2200, 
-    price: 1599, 
-    discount: 27, 
-    image: "/api/placeholder/200/200", 
-    sold: 89, 
-    total: 150,
-    features: ["For All Floors", "5L Bottle", "Shine & Protect", "Quick Dry"],
-    type: "Floor Care",
-    category: "Floor Care",
-    rating: 4.6,
-    reviewCount: 156,
-    delivery: "2-3 days",
-    vendor: "Home Sparkle Supplies",
-    isAmazonChoice: false,
-    isBestSeller: false,
-    stock: "In stock",
-    coupon: "FLOOR20"
-  },
-  { 
-    id: 5, 
-    name: "Natural Glass Cleaner - Eco Formula", 
-    originalPrice: 1200, 
-    price: 899, 
-    discount: 25, 
-    image: "/api/placeholder/200/200", 
-    sold: 312, 
-    total: 500,
-    features: ["Streak-Free", "Vinegar Base", "Eco-Friendly", "Quick Dry"],
-    type: "Cleaner",
-    category: "Eco-Friendly",
-    rating: 4.5,
-    reviewCount: 201,
-    delivery: "Tomorrow",
-    vendor: "Eco Clean Solutions",
-    isAmazonChoice: true,
-    isBestSeller: false,
-    stock: "In stock",
-    coupon: "GREEN10"
-  },
-  { 
-    id: 6, 
-    name: "Commercial Pressure Washer", 
-    originalPrice: 45000, 
-    price: 38999, 
-    discount: 13, 
-    image: "/api/placeholder/200/200", 
-    sold: 45, 
-    total: 100,
-    features: ["2000 PSI", "Commercial Grade", "5-Year Warranty", "Heavy Duty"],
-    type: "Equipment",
-    category: "Commercial Grade",
-    rating: 4.8,
-    reviewCount: 89,
-    delivery: "5-7 days",
-    vendor: "Industrial Clean KE",
-    isAmazonChoice: false,
-    isBestSeller: true,
-    stock: "Only 3 left",
-    coupon: null
-  },
-  { 
-    id: 7, 
-    name: "Antibacterial Bathroom Cleaner", 
-    originalPrice: 1500, 
-    price: 1099, 
-    discount: 27, 
-    image: "/api/placeholder/200/200", 
-    sold: 178, 
-    total: 300,
-    features: ["Kills Mold & Mildew", "Fresh Scent", "No Bleach", "Eco Certified"],
-    type: "Disinfectant",
-    category: "Bathroom Cleaners",
-    rating: 4.4,
-    reviewCount: 134,
-    delivery: "Tomorrow",
-    vendor: "Sparkle Pro Clean",
-    isAmazonChoice: false,
-    isBestSeller: false,
-    stock: "In stock",
-    coupon: "BATH15"
-  },
-  { 
-    id: 8, 
-    name: "Professional Kitchen Degreaser", 
-    originalPrice: 2800, 
-    price: 1999, 
-    discount: 29, 
-    image: "/api/placeholder/200/200", 
-    sold: 267, 
-    total: 400,
-    features: ["Heavy Duty", "Food Safe", "Quick Acting", "Professional Grade"],
-    type: "Cleaner",
-    category: "Kitchen Cleaners",
-    rating: 4.7,
-    reviewCount: 189,
-    delivery: "Today",
-    vendor: "Home Sparkle Supplies",
-    isAmazonChoice: true,
-    isBestSeller: true,
-    stock: "In stock",
-    coupon: "KITCHEN20"
-  }
-]
-
-// Recently viewed products (simulated data)
-const recentlyViewed = [
-  { id: 9, name: "Glass Cleaner Spray", price: 850, image: "/api/placeholder/100/100", viewedAt: "2 hours ago", vendor: "Sparkle Pro Clean", type: "Cleaner", features: ["Streak-Free", "Quick Dry"], delivery: "Tomorrow", stock: "In stock" },
-  { id: 10, name: "Antibacterial Wipes", price: 1200, image: "/api/placeholder/100/100", viewedAt: "1 day ago", vendor: "Eco Clean Solutions", type: "Disinfectant", features: ["Kills 99.9% Germs", "Biodegradable"], delivery: "Today", stock: "In stock" },
-  { id: 11, name: "Carpet Cleaner", price: 2100, image: "/api/placeholder/100/100", viewedAt: "3 days ago", vendor: "Industrial Clean KE", type: "Equipment", features: ["Deep Clean", "Stain Removal"], delivery: "2-3 days", stock: "In stock" }
 ]
 
 // Enhanced advertisement data
@@ -484,6 +307,38 @@ const sidebarProducts = [
   }
 ]
 
+// Interface for transformed product data
+interface Deal {
+  id: string;
+  name: string;
+  originalPrice: number;
+  price: number;
+  discount: number;
+  image: string;
+  sold: number;
+  total: number;
+  features: string[];
+  type: string;
+  category: string;
+  rating: number;
+  reviewCount: number;
+  delivery: string;
+  vendor: string;
+  isAmazonChoice: boolean;
+  isBestSeller: boolean;
+  stock: string;
+  coupon: string | null;
+  isSponsored?: boolean;
+  adLabel?: string;
+}
+
+// Recently viewed products (simulated data)
+const recentlyViewed = [
+  { id: "9", name: "Glass Cleaner Spray", price: 850, image: "/api/placeholder/100/100", viewedAt: "2 hours ago", vendor: "Sparkle Pro Clean", type: "Cleaner", features: ["Streak-Free", "Quick Dry"], delivery: "Tomorrow", stock: "In stock" },
+  { id: "10", name: "Antibacterial Wipes", price: 1200, image: "/api/placeholder/100/100", viewedAt: "1 day ago", vendor: "Eco Clean Solutions", type: "Disinfectant", features: ["Kills 99.9% Germs", "Biodegradable"], delivery: "Today", stock: "In stock" },
+  { id: "11", name: "Carpet Cleaner", price: 2100, image: "/api/placeholder/100/100", viewedAt: "3 days ago", vendor: "Industrial Clean KE", type: "Equipment", features: ["Deep Clean", "Stain Removal"], delivery: "2-3 days", stock: "In stock" }
+]
+
 // Enhanced Vendor Card Component
 const VendorCard = ({ vendor }: { vendor: any }) => {
   return (
@@ -567,7 +422,7 @@ const VendorCard = ({ vendor }: { vendor: any }) => {
 }
 
 // Enhanced Deal Card Component with Cart Integration
-const DealCard = ({ deal }: { deal: any }) => {
+const DealCard = ({ deal }: { deal: Deal }) => {
   const { addToCart } = useCart()
   const [showNotification, setShowNotification] = useState(false)
   const router = useRouter()
@@ -590,14 +445,13 @@ const DealCard = ({ deal }: { deal: any }) => {
       price: deal.price,
       vendor: deal.vendor,
       delivery: deal.delivery,
-      image: "/api/placeholder/200/200"
+      image: deal.image
     })
     setShowNotification(true)
     setTimeout(() => setShowNotification(false), 2000)
   }
 
   const handleViewDetails = () => {
-    // Store ALL product data for the specific deal
     const productData = {
       id: deal.id,
       name: deal.name,
@@ -605,7 +459,7 @@ const DealCard = ({ deal }: { deal: any }) => {
       originalPrice: deal.originalPrice,
       discount: deal.discount,
       description: "Professional-grade cleaning product that effectively removes dirt, grime, and stains. Eco-certified and safe for families and pets.",
-      image: "/api/placeholder/200/200",
+      image: deal.image,
       category: deal.category,
       rating: deal.rating,
       reviewCount: deal.reviewCount,
@@ -621,15 +475,7 @@ const DealCard = ({ deal }: { deal: any }) => {
     }
     
     console.log('🛒 Navigating to product:', productData.name)
-    console.log('🛒 Storing product data:', productData)
-    
-    // ✅ FIX: Use 'currentProduct' key instead of 'product-{id}'
     localStorage.setItem('currentProduct', JSON.stringify(productData))
-    
-    // Verify it was stored
-    const stored = localStorage.getItem('currentProduct')
-    console.log('🛒 Verified localStorage:', stored)
-    
     router.push(`/product/${deal.id}`)
   }
 
@@ -719,9 +565,9 @@ const DealCard = ({ deal }: { deal: any }) => {
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-gray-900">KSh {deal.price}</span>
-            <span className="text-sm text-gray-500 line-through">KSh {deal.originalPrice}</span>
-            <span className="text-xs text-red-500 font-semibold">Save KSh {deal.originalPrice - deal.price}</span>
+            <span className="text-lg font-bold text-gray-900">KSh {deal.price.toLocaleString()}</span>
+            <span className="text-sm text-gray-500 line-through">KSh {deal.originalPrice.toLocaleString()}</span>
+            <span className="text-xs text-red-500 font-semibold">Save KSh {(deal.originalPrice - deal.price).toLocaleString()}</span>
           </div>
 
           {/* Delivery Info */}
@@ -824,7 +670,7 @@ const RecentlyViewedCard = ({ product }: { product: any }) => {
               {product.name}
             </h4>
             <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-emerald-600">KSh {product.price}</span>
+              <span className="text-lg font-bold text-emerald-600">KSh {product.price.toLocaleString()}</span>
               <span className="text-xs text-gray-500">{product.viewedAt}</span>
             </div>
             <div className="flex gap-2 mt-2">
@@ -929,8 +775,8 @@ const SponsoredProductCard = ({ product }: { product: any }) => {
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-gray-900">KSh {product.price}</span>
-            <span className="text-sm text-gray-500 line-through">KSh {product.originalPrice}</span>
+            <span className="text-lg font-bold text-gray-900">KSh {product.price.toLocaleString()}</span>
+            <span className="text-sm text-gray-500 line-through">KSh {product.originalPrice.toLocaleString()}</span>
           </div>
 
           <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -1145,7 +991,7 @@ const SidebarProductCard = ({ product }: { product: any }) => {
               <span className="text-xs text-gray-600">{product.rating}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-emerald-600">KSh {product.price}</span>
+              <span className="text-sm font-bold text-emerald-600">KSh {product.price.toLocaleString()}</span>
               <div className="flex gap-1">
                 <Button 
                   size="sm" 
@@ -1180,9 +1026,110 @@ const SidebarProductCard = ({ product }: { product: any }) => {
 
 export default function MarketplacePage() {
   const { cartItemsCount } = useCart()
-  const [filteredDeals, setFilteredDeals] = useState(allCleaningDeals)
-  const [searchResults, setSearchResults] = useState(allCleaningDeals)
+  const [allCleaningDeals, setAllCleaningDeals] = useState<Deal[]>([])
+  const [filteredDeals, setFilteredDeals] = useState<Deal[]>([])
+  const [searchResults, setSearchResults] = useState<Deal[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch products from MongoDB on component mount
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true)
+        const response = await fetchProducts()
+        
+        if (response.success && response.products) {
+          // Transform MongoDB products to deal format
+          const transformedDeals: Deal[] = response.products.map((product: ApiProduct, index: number) => {
+            const categoryMap: { [key: string]: string } = {
+              "industrial-equipment": "Industrial Equipment",
+              "household-cleaners": "Household Cleaners", 
+              "eco-friendly": "Eco-Friendly"
+            }
+            
+            const typeMap: { [key: string]: string } = {
+              "industrial-equipment": "Equipment",
+              "household-cleaners": "Cleaner",
+              "eco-friendly": "Cleaner"
+            }
+            
+            const vendorNames = [
+              "Sparkle Pro Clean", "Eco Clean Solutions", "Industrial Clean KE", 
+              "Home Sparkle Supplies", "CleanTech Kenya", "ProClean Solutions"
+            ]
+            
+            const featuresMap: { [key: string]: string[] } = {
+              "industrial-equipment": ["Professional Grade", "Heavy Duty", "Commercial Use", "Durable"],
+              "household-cleaners": ["All-Purpose", "Safe for Families", "Effective", "Easy to Use"],
+              "eco-friendly": ["Eco-Friendly", "Biodegradable", "Natural Ingredients", "Sustainable"]
+            }
+            
+            const category = categoryMap[product.category] || product.category
+            const type = typeMap[product.category] || "Cleaner"
+            const features = featuresMap[product.category] || ["Quality", "Reliable"]
+            
+            // Create realistic deal data based on product
+            const originalPrice = Math.round(product.price * (1 + (Math.random() * 0.3 + 0.1))) // 10-40% higher
+            const discount = Math.round(((originalPrice - product.price) / originalPrice) * 100)
+            const sold = Math.floor(Math.random() * 200) + 50
+            const total = sold + Math.floor(Math.random() * 100) + 20
+            const rating = 4.0 + (Math.random() * 1.0) // 4.0-5.0 rating
+            const reviewCount = Math.floor(Math.random() * 300) + 50
+            const deliveryOptions = ["Today", "Tomorrow", "2-3 days"]
+            const delivery = deliveryOptions[Math.floor(Math.random() * deliveryOptions.length)]
+            const vendor = vendorNames[Math.floor(Math.random() * vendorNames.length)]
+            const stockOptions = ["In stock", "Only 5 left", "Only 3 left", "In stock"]
+            const stock = stockOptions[Math.floor(Math.random() * stockOptions.length)]
+            const coupons = [null, "SAVE100", "CLEAN15", "FLOOR20", "GREEN10"]
+            const coupon = coupons[Math.floor(Math.random() * coupons.length)]
+            const isAmazonChoice = Math.random() > 0.7
+            const isBestSeller = Math.random() > 0.8
+            
+            return {
+              id: product._id || `product-${index}`,
+              name: product.name,
+              originalPrice,
+              price: product.price,
+              discount,
+              image: product.image || "/api/placeholder/200/200",
+              sold,
+              total,
+              features,
+              type,
+              category,
+              rating: parseFloat(rating.toFixed(1)),
+              reviewCount,
+              delivery,
+              vendor,
+              isAmazonChoice,
+              isBestSeller,
+              stock,
+              coupon
+            }
+          })
+          
+          setAllCleaningDeals(transformedDeals)
+          setFilteredDeals(transformedDeals)
+          setSearchResults(transformedDeals)
+        } else {
+          throw new Error('Failed to load products')
+        }
+      } catch (err) {
+        console.error('Failed to fetch products:', err)
+        setError('Error connecting to database')
+        // Fallback to empty arrays to prevent runtime errors
+        setAllCleaningDeals([])
+        setFilteredDeals([])
+        setSearchResults([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProducts()
+  }, [])
 
   // Search and filter handler
   const handleSearch = (query: string, filters: any) => {
@@ -1274,7 +1221,7 @@ export default function MarketplacePage() {
       premiumAds.sponsoredProducts.forEach((sponsored, index) => {
         const insertPosition = (index + 1) * 3
         if (insertPosition <= products.length) {
-          products.splice(insertPosition, 0, sponsored)
+          products.splice(insertPosition, 0, sponsored as Deal)
         }
       })
     }
@@ -1282,6 +1229,41 @@ export default function MarketplacePage() {
   }
 
   const displayProducts = getDisplayProducts()
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+        <FixedNavbar cartItemsCount={cartItemsCount} />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-20">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading Marketplace</h2>
+            <p className="text-gray-600">Fetching real products from database...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+        <FixedNavbar cartItemsCount={cartItemsCount} />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-20">
+            <div className="text-red-500 text-4xl mb-4">⚠️</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Failed to Load Products</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <Button onClick={() => window.location.reload()} className="bg-emerald-600 hover:bg-emerald-700">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
@@ -1301,6 +1283,13 @@ export default function MarketplacePage() {
             <p className="text-lg mb-8 opacity-80 max-w-2xl mx-auto">
               Source quality products, equipment, and supplies from verified suppliers across Kenya
             </p>
+            {!loading && (
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 inline-block">
+                <p className="text-white/90">
+                  Showing <strong>{allCleaningDeals.length}</strong> real products from database
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1656,7 +1645,7 @@ export default function MarketplacePage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Products</span>
-                    <span className="font-semibold">1,200+</span>
+                    <span className="font-semibold">{allCleaningDeals.length}+</span>
                   </div>
                 </div>
               </CardContent>

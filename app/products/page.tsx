@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Search, Filter, Plus, Edit, Trash2, Package, Star, Leaf } from "lucide-react"
@@ -10,94 +10,94 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { fetchProducts, type Product } from "@/lib/api"
 
-const products = [
-  {
-    id: 1,
-    name: "Eco-Friendly All-Purpose Cleaner",
-    category: "Household",
-    price: 850,
-    stock: 45,
-    rating: 4.8,
-    image: "/eco-friendly-cleaner.jpg",
-    ecoLabel: "Biodegradable",
-    vendor: "GreenClean Kenya",
-  },
-  {
-    id: 2,
-    name: "Industrial Floor Cleaner",
-    category: "Industrial",
-    price: 2500,
-    stock: 12,
-    rating: 4.6,
-    image: "/industrial-floor-cleaner.jpg",
-    ecoLabel: "Low VOC",
-    vendor: "CleanPro Solutions",
-  },
-  {
-    id: 3,
-    name: "Biodegradable Dish Soap",
-    category: "Kitchen",
-    price: 450,
-    stock: 78,
-    rating: 4.9,
-    image: "/biodegradable-dish-soap.jpg",
-    ecoLabel: "100% Natural",
-    vendor: "EcoWash Ltd",
-  },
-  {
-    id: 4,
-    name: "Heavy Duty Degreaser",
-    category: "Industrial",
-    price: 1800,
-    stock: 23,
-    rating: 4.5,
-    image: "/heavy-duty-degreaser.jpg",
-    ecoLabel: "Plant-Based",
-    vendor: "Industrial Clean Co",
-  },
-  {
-    id: 5,
-    name: "Organic Glass Cleaner",
-    category: "Household",
-    price: 650,
-    stock: 56,
-    rating: 4.7,
-    image: "/organic-glass-cleaner.jpg",
-    ecoLabel: "Organic",
-    vendor: "Pure Clean Kenya",
-  },
-  {
-    id: 6,
-    name: "Antibacterial Wipes",
-    category: "Healthcare",
-    price: 320,
-    stock: 89,
-    rating: 4.4,
-    image: "/antibacterial-wipes.jpg",
-    ecoLabel: "Compostable",
-    vendor: "SafeClean Medical",
-  },
-]
+// Map MongoDB categories to display categories
+const categoryMap: { [key: string]: string } = {
+  "industrial-equipment": "Industrial",
+  "household-cleaners": "Household",
+  "eco-friendly": "Eco-Friendly"
+}
+
+// Map MongoDB categories to eco labels
+const ecoLabelMap: { [key: string]: string } = {
+  "eco-friendly": "Eco-Friendly",
+  "household-cleaners": "Natural",
+  "industrial-equipment": "Professional"
+}
 
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [priceRange, setPriceRange] = useState("all")
   const [ecoFilter, setEcoFilter] = useState(false)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
+  // Fetch products from MongoDB on component mount
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true)
+        const response = await fetchProducts()
+        if (response.success && response.products) {
+          setProducts(response.products)
+        } else {
+          setError("Failed to load products")
+        }
+      } catch (err) {
+        setError("Error connecting to server")
+        console.error("Error fetching products:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProducts()
+  }, [])
+
+  // Filter products based on user selections
   const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
+    const displayCategory = categoryMap[product.category] || product.category
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = selectedCategory === "all" || displayCategory === selectedCategory
     const matchesPrice =
       priceRange === "all" ||
       (priceRange === "low" && product.price < 500) ||
       (priceRange === "medium" && product.price >= 500 && product.price < 1500) ||
       (priceRange === "high" && product.price >= 1500)
-    const matchesEco = !ecoFilter || product.ecoLabel
+    const matchesEco = !ecoFilter || product.category === "eco-friendly"
 
     return matchesSearch && matchesCategory && matchesPrice && matchesEco
   })
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading products from database...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-destructive text-2xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold mb-2">Failed to load products</h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,7 +135,9 @@ export default function ProductsPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Product Management</h1>
-            <p className="text-muted-foreground mt-2">Manage your cleaning supply inventory</p>
+            <p className="text-muted-foreground mt-2">
+              Managing {products.length} products from MongoDB database
+            </p>
           </div>
           <Button className="bg-primary hover:bg-primary/90">
             <Plus className="w-4 h-4 mr-2" />
@@ -174,10 +176,9 @@ export default function ProductsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="Household">Household</SelectItem>
                       <SelectItem value="Industrial">Industrial</SelectItem>
-                      <SelectItem value="Kitchen">Kitchen</SelectItem>
-                      <SelectItem value="Healthcare">Healthcare</SelectItem>
+                      <SelectItem value="Household">Household</SelectItem>
+                      <SelectItem value="Eco-Friendly">Eco-Friendly</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -225,69 +226,88 @@ export default function ProductsPage() {
                     <SelectItem value="name">Sort by Name</SelectItem>
                     <SelectItem value="price">Sort by Price</SelectItem>
                     <SelectItem value="stock">Sort by Stock</SelectItem>
-                    <SelectItem value="rating">Sort by Rating</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <Card key={product.id} className="group hover:shadow-lg transition-shadow">
-                  <CardHeader className="p-0">
-                    <div className="relative">
-                      <Image
-                        src={product.image || "/placeholder.svg"}
-                        alt={product.name}
-                        width={300}
-                        height={200}
-                        className="w-full h-48 object-cover rounded-t-lg"
-                      />
-                      <Badge className="absolute top-2 right-2 bg-secondary text-secondary-foreground">
-                        <Leaf className="w-3 h-3 mr-1" />
-                        {product.ecoLabel}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-foreground line-clamp-2">{product.name}</h3>
-                      <div className="flex items-center space-x-1">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm text-muted-foreground">{product.rating}</span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">{product.vendor}</p>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-lg font-bold text-primary">KSh {product.price.toLocaleString()}</span>
-                      <Badge variant="outline" className="text-xs">
-                        <Package className="w-3 h-3 mr-1" />
-                        {product.stock} in stock
-                      </Badge>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {product.category}
-                    </Badge>
-                  </CardContent>
-                  <CardFooter className="p-4 pt-0">
-                    <div className="flex space-x-2 w-full opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button size="sm" variant="outline" className="flex-1 bg-transparent">
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 text-destructive hover:text-destructive bg-transparent"
-                      >
-                        <Trash2 className="w-4 h-4 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+            {filteredProducts.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No products found</h3>
+                  <p className="text-muted-foreground">
+                    Try adjusting your filters or search terms
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProducts.map((product) => {
+                  const displayCategory = categoryMap[product.category] || product.category
+                  const ecoLabel = ecoLabelMap[product.category] || "Standard"
+                  const isEcoFriendly = product.category === "eco-friendly"
+                  
+                  return (
+                    <Card key={product._id} className="group hover:shadow-lg transition-shadow">
+                      <CardHeader className="p-0">
+                        <div className="relative">
+                          <Image
+                            src={product.image || "/placeholder.svg"}
+                            alt={product.name}
+                            width={300}
+                            height={200}
+                            className="w-full h-48 object-cover rounded-t-lg"
+                          />
+                          {isEcoFriendly && (
+                            <Badge className="absolute top-2 right-2 bg-green-500 text-white">
+                              <Leaf className="w-3 h-3 mr-1" />
+                              {ecoLabel}
+                            </Badge>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-semibold text-foreground line-clamp-2">{product.name}</h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                          {product.description}
+                        </p>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-lg font-bold text-primary">
+                            KSh {product.price.toLocaleString()}
+                          </span>
+                          <Badge variant={product.inStock ? "outline" : "destructive"} className="text-xs">
+                            <Package className="w-3 h-3 mr-1" />
+                            {product.inStock ? "In Stock" : "Out of Stock"}
+                          </Badge>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {displayCategory}
+                        </Badge>
+                      </CardContent>
+                      <CardFooter className="p-4 pt-0">
+                        <div className="flex space-x-2 w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button size="sm" variant="outline" className="flex-1 bg-transparent">
+                            <Edit className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-destructive hover:text-destructive bg-transparent"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </CardFooter>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

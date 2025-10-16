@@ -16,14 +16,19 @@ import {
   Save,
   X,
   Check,
-  DollarSign
+  DollarSign,
+  RefreshCw
 } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function AddProductPage() {
   const { toast } = useToast()
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [formData, setFormData] = useState({
     // Basic Information
     name: "",
@@ -39,6 +44,7 @@ export default function AddProductPage() {
     
     // Media
     images: [] as File[],
+    imageUrls: [] as string[],
     
     // Variants
     hasVariants: false,
@@ -99,7 +105,25 @@ export default function AddProductPage() {
     { id: 5, name: "Shipping & SEO", description: "Delivery and search optimization" },
   ]
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  // Get vendor ID from vendor auth context
+  const getVendorId = () => {
+    // In a real app, you'd get this from vendor authentication context
+    // For now, let's get it from localStorage where it was stored during login
+    const storedVendor = localStorage.getItem('vendor');
+    if (storedVendor) {
+      try {
+        const vendorData = JSON.parse(storedVendor);
+        return vendorData._id || vendorData.id;
+      } catch (error) {
+        console.error('Error parsing vendor data:', error);
+      }
+    }
+    
+    // Fallback to demo vendor ID from your login logs
+    return '68efb302ffa9682bb4a9bf81';
+  }
+
+  const handleInputChange = (field: string, value: string | boolean | any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -204,27 +228,241 @@ export default function AddProductPage() {
     }
   }
 
-  const handleSubmit = async () => {
+  // Upload images to backend
+  const uploadImages = async (files: File[]): Promise<string[]> => {
+    const uploadedUrls: string[] = []
+    
+    for (const file of files) {
+      const formData = new FormData()
+      formData.append('image', file)
+      
+      try {
+        const response = await fetch('http://localhost:5000/api/upload', {
+          method: 'POST',
+          body: formData,
+        })
+        
+        if (response.ok) {
+          const result = await response.json()
+          uploadedUrls.push(result.url)
+        } else {
+          console.error('Failed to upload image:', file.name)
+          // Use a placeholder URL for demo
+          uploadedUrls.push('/placeholder-product.jpg')
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error)
+        uploadedUrls.push('/placeholder-product.jpg')
+      }
+    }
+    
+    return uploadedUrls
+  }
+
+  const handleSaveDraft = async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      setIsSavingDraft(true);
+      console.log('💾 Saving product as draft...');
       
-      toast({
-        title: "Product Created!",
-        description: "Your product has been successfully added to your store.",
+      // Get vendor ID from vendor auth
+      const vendorId = getVendorId();
+      
+      if (!vendorId) {
+        toast({
+          title: "Vendor ID Missing",
+          description: "Please log in as a vendor to create products.",
+          variant: "destructive",
+        });
+        setIsSavingDraft(false);
+        return;
+      }
+
+      console.log('👤 Using vendor ID:', vendorId);
+      
+      // Prepare draft data - minimal validation for drafts
+      const draftData = {
+        name: formData.name || 'Untitled Product Draft',
+        description: formData.description || 'Product description will be added later.',
+        category: formData.category || 'Uncategorized',
+        brand: formData.brand || '',
+        price: formData.price ? parseFloat(formData.price) : 0,
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
+        stock: formData.stock ? parseInt(formData.stock) : 0,
+        sku: formData.sku || `DRAFT-${Date.now()}`,
+        images: [], // Skip image upload for drafts to save time
+        vendorId: vendorId, // Use the actual vendor ID
+        specifications: formData.specifications.filter(spec => spec.key && spec.value),
+        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        dimensions: formData.dimensions,
+        metaTitle: formData.metaTitle,
+        metaDescription: formData.metaDescription,
+        status: 'draft', // Explicitly set to draft
+        isEcoFriendly: formData.isEcoFriendly,
+        isFeatured: false, // Drafts should not be featured
+        variants: formData.hasVariants ? formData.variants.map(variant => ({
+          name: variant.name,
+          price: variant.price ? parseFloat(variant.price) : 0,
+          originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : undefined,
+          stock: variant.stock ? parseInt(variant.stock) : 0,
+          sku: variant.sku,
+          attributes: variant.attributes
+        })) : []
+      }
+
+      console.log('📦 Saving draft data:', draftData);
+
+      // Send draft data to backend API
+      const response = await fetch('http://localhost:5000/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(draftData),
       })
-      
-      // Redirect to products list
-      // router.push('/vendor/products')
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to save draft: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('✅ Draft saved successfully:', result);
+        toast({
+          title: "Draft Saved Successfully!",
+          description: "Your product has been saved as a draft. You can continue editing later.",
+        });
+        
+        // Redirect to products list after short delay
+        setTimeout(() => {
+          router.push('/vendor/products');
+        }, 1500);
+      } else {
+        throw new Error(result.message || 'Failed to save draft');
+      }
+
     } catch (error) {
+      console.error('❌ Error saving draft:', error);
       toast({
-        title: "Failed to Create Product",
-        description: "Please try again or contact support.",
+        title: "Failed to Save Draft",
+        description: error instanceof Error ? error.message : "Please try again or contact support.",
         variant: "destructive",
-      })
+      });
+    } finally {
+      setIsSavingDraft(false);
     }
   }
 
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+
+      // Validate required fields for published products
+      if (!formData.name || !formData.description || !formData.category || !formData.price || !formData.stock) {
+        toast({
+          title: "Missing Required Fields",
+          description: "Please fill in all required fields (Name, Description, Category, Price, Stock).",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Get vendor ID from vendor auth
+      const vendorId = getVendorId();
+      
+      if (!vendorId) {
+        toast({
+          title: "Vendor ID Missing",
+          description: "Please log in as a vendor to create products.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Upload images if any
+      let imageUrls: string[] = [];
+      if (formData.images.length > 0) {
+        imageUrls = await uploadImages(formData.images);
+      }
+
+      // Prepare product data for API
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        brand: formData.brand,
+        price: parseFloat(formData.price),
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
+        stock: parseInt(formData.stock),
+        sku: formData.sku,
+        images: imageUrls,
+        vendorId: vendorId, // Use the actual vendor ID
+        specifications: formData.specifications.filter(spec => spec.key && spec.value),
+        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        dimensions: formData.dimensions,
+        metaTitle: formData.metaTitle,
+        metaDescription: formData.metaDescription,
+        status: formData.status,
+        isEcoFriendly: formData.isEcoFriendly,
+        isFeatured: formData.isFeatured,
+        // Handle variants if enabled
+        variants: formData.hasVariants ? formData.variants.map(variant => ({
+          name: variant.name,
+          price: parseFloat(variant.price),
+          originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : undefined,
+          stock: parseInt(variant.stock),
+          sku: variant.sku,
+          attributes: variant.attributes
+        })) : []
+      }
+
+      console.log('📦 Submitting product data:', productData);
+
+      // Send product data to backend API
+      const response = await fetch('http://localhost:5000/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create product: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Product Created Successfully!",
+          description: "Your product has been added to your store and is now live.",
+        });
+        
+        // Redirect to products list after successful creation
+        setTimeout(() => {
+          router.push('/vendor/products');
+        }, 2000);
+      } else {
+        throw new Error(result.message || 'Failed to create product');
+      }
+
+    } catch (error) {
+      console.error('❌ Error creating product:', error);
+      toast({
+        title: "Failed to Create Product",
+        description: error instanceof Error ? error.message : "Please try again or contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  // ... (renderStepContent function remains exactly the same as before)
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
@@ -245,6 +483,7 @@ export default function AddProductPage() {
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   placeholder="e.g., Eco-Friendly All-Purpose Cleaner"
+                  required
                 />
               </div>
 
@@ -256,6 +495,7 @@ export default function AddProductPage() {
                   onChange={(e) => handleInputChange("description", e.target.value)}
                   placeholder="Describe your product features, benefits, and usage..."
                   rows={5}
+                  required
                 />
               </div>
 
@@ -267,6 +507,7 @@ export default function AddProductPage() {
                     value={formData.category}
                     onChange={(e) => handleInputChange("category", e.target.value)}
                     className="w-full border rounded-lg px-3 py-2"
+                    required
                   >
                     <option value="">Select a category</option>
                     {categories.map(category => (
@@ -321,6 +562,7 @@ export default function AddProductPage() {
                     value={formData.price}
                     onChange={(e) => handleInputChange("price", e.target.value)}
                     placeholder="850"
+                    required
                   />
                 </div>
                 <div>
@@ -341,6 +583,7 @@ export default function AddProductPage() {
                     value={formData.stock}
                     onChange={(e) => handleInputChange("stock", e.target.value)}
                     placeholder="50"
+                    required
                   />
                 </div>
               </div>
@@ -355,7 +598,7 @@ export default function AddProductPage() {
                 />
               </div>
 
-              {/* Variants */}
+              {/* Variants section */}
               <div className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -793,17 +1036,40 @@ export default function AddProductPage() {
                 <Button
                   variant="outline"
                   onClick={handlePreviousStep}
-                  disabled={currentStep === 1}
+                  disabled={currentStep === 1 || isSubmitting || isSavingDraft}
                 >
                   Previous
                 </Button>
                 <div className="flex gap-3">
-                  <Button variant="outline">
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Draft
+                  <Button 
+                    variant="outline" 
+                    onClick={handleSaveDraft}
+                    disabled={isSubmitting || isSavingDraft}
+                  >
+                    {isSavingDraft ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Saving Draft...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Draft
+                      </>
+                    )}
                   </Button>
-                  <Button onClick={handleNextStep}>
-                    {currentStep === steps.length ? "Create Product" : "Next Step"}
+                  <Button 
+                    onClick={handleNextStep}
+                    disabled={isSubmitting || isSavingDraft}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        {currentStep === steps.length ? "Creating..." : "Processing..."}
+                      </>
+                    ) : (
+                      currentStep === steps.length ? "Create Product" : "Next Step"
+                    )}
                   </Button>
                 </div>
               </div>
@@ -811,8 +1077,6 @@ export default function AddProductPage() {
           </Card>
         </div>
       </div>
-
-      {/* REMOVED: Footer section */}
 
       {/* Floating Help Desk Widget */}
       <HelpDesk />

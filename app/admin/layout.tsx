@@ -1,8 +1,10 @@
+// app/admin/layout.tsx
 "use client"
 
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
+import { AdminProvider } from "@/app/contexts/admin-context"
 
 // Simple admin check - in real app, you'd have proper admin authentication
 const isAdmin = () => {
@@ -60,29 +62,31 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Admin Panel</h1>
-              <p className="text-muted-foreground">Vendor Management</p>
-            </div>
-            <div className="flex gap-4">
-              <a href="/admin" className="text-sm font-medium hover:text-primary">
-                Dashboard
-              </a>
-              <a href="/admin/vendors" className="text-sm font-medium hover:text-primary">
-                Vendors
-              </a>
-              <a href="/" className="text-sm font-medium hover:text-primary">
-                Back to Site
-              </a>
+    <AdminProvider>
+      <div className="min-h-screen bg-background">
+        <div className="border-b">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold">Admin Panel</h1>
+                <p className="text-muted-foreground">Vendor Management</p>
+              </div>
+              <div className="flex gap-4">
+                <a href="/admin" className="text-sm font-medium hover:text-primary">
+                  Dashboard
+                </a>
+                <a href="/admin/vendors" className="text-sm font-medium hover:text-primary">
+                  Vendors
+                </a>
+                <a href="/" className="text-sm font-medium hover:text-primary">
+                  Back to Site
+                </a>
+              </div>
             </div>
           </div>
         </div>
+        {children}
       </div>
-      {children}
-    </div>
+    </AdminProvider>
   )
 }

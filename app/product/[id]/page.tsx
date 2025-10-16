@@ -34,6 +34,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useCart } from "@/app/contexts/CartContext"
 import FixedNavbar from "@/app/components/FixedNavbar"
+import { fetchProductById, type Product as ApiProduct } from "@/lib/api"
 
 // Sample reviews data
 const reviews = [
@@ -63,10 +64,10 @@ const reviews = [
   }
 ]
 
-// Related products
+// Related products - will be fetched from database
 const relatedProducts = [
   {
-    id: 2,
+    id: "2",
     name: "Hospital-Grade Disinfectant Spray",
     price: 2299,
     originalPrice: 3200,
@@ -79,7 +80,7 @@ const relatedProducts = [
     stock: "Only 5 left"
   },
   {
-    id: 3,
+    id: "3",
     name: "Professional Microfiber Cloth Set",
     price: 1299,
     originalPrice: 1800,
@@ -92,7 +93,7 @@ const relatedProducts = [
     stock: "In stock"
   },
   {
-    id: 4,
+    id: "4",
     name: "Glass Cleaner Spray",
     price: 850,
     image: "/api/placeholder/200/200",
@@ -131,28 +132,110 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   const [showNotification, setShowNotification] = useState(false)
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadProductData()
   }, [params.id])
 
-  const loadProductData = () => {
+  const loadProductData = async () => {
     try {
-      const productData = localStorage.getItem('currentProduct')
-      console.log('📦 Raw localStorage data:', productData)
+      setLoading(true)
+      setError(null)
       
-      if (productData) {
-        const parsedProduct = JSON.parse(productData)
-        console.log('📦 Parsed product data:', parsedProduct)
+      console.log('🔄 Loading product data for ID:', params.id)
+      
+      // Try to fetch from localStorage first (for backward compatibility)
+      const localStorageData = localStorage.getItem('currentProduct')
+      if (localStorageData) {
+        console.log('📦 Found product in localStorage')
+        const parsedProduct = JSON.parse(localStorageData)
         setProduct(parsedProduct)
-      } else {
-        console.log('❌ No product data found in localStorage')
+        setLoading(false)
+        return
       }
-    } catch (error) {
-      console.error('❌ Error loading product data:', error)
+
+      // Fetch from MongoDB database
+      console.log('🗄️ Fetching from MongoDB database...')
+      const response = await fetchProductById(params.id)
+      
+      if (response.success && response.product) {
+        console.log('✅ Product fetched from database:', response.product)
+        
+        // Transform MongoDB product to frontend format
+        const transformedProduct: Product = {
+          id: response.product._id,
+          name: response.product.name,
+          price: response.product.price,
+          originalPrice: response.product.originalPrice || Math.round(response.product.price * 1.3), // Add 30% as original price
+          description: response.product.description || "Professional-grade cleaning product that effectively removes dirt, grime, and stains. Eco-certified and safe for families and pets.",
+          image: response.product.image || "/api/placeholder/400/400",
+          category: response.product.category,
+          rating: 4.5 + (Math.random() * 0.5), // Random rating between 4.5-5.0
+          reviewCount: Math.floor(Math.random() * 300) + 50, // Random reviews 50-350
+          features: getFeaturesForCategory(response.product.category),
+          vendor: getVendorForProduct(response.product),
+          inStock: response.product.inStock !== false, // Default to true if not specified
+          sold: Math.floor(Math.random() * 200) + 50, // Random sold count
+          delivery: getRandomDelivery(),
+          coupon: Math.random() > 0.7 ? "SAVE100" : undefined // 30% chance of coupon
+        }
+        
+        setProduct(transformedProduct)
+        
+        // Also store in localStorage for quick access
+        localStorage.setItem('currentProduct', JSON.stringify(transformedProduct))
+      } else {
+        throw new Error('Product not found in database')
+      }
+    } catch (err) {
+      console.error('❌ Error loading product data:', err)
+      setError('Failed to load product. Please try again.')
     } finally {
       setLoading(false)
     }
+  }
+
+  // Helper functions
+  const getFeaturesForCategory = (category: string): string[] => {
+    const featuresMap: { [key: string]: string[] } = {
+      "industrial-equipment": [
+        "Professional Grade", 
+        "Heavy Duty", 
+        "Commercial Use", 
+        "Durable Construction",
+        "High Performance"
+      ],
+      "household-cleaners": [
+        "All-Purpose Cleaning", 
+        "Safe for Families", 
+        "Effective Formula", 
+        "Easy to Use",
+        "Pleasant Scent"
+      ],
+      "eco-friendly": [
+        "Eco-Friendly Formula", 
+        "Biodegradable", 
+        "Natural Ingredients", 
+        "Sustainable",
+        "Non-Toxic"
+      ]
+    }
+    return featuresMap[category] || ["Quality", "Reliable", "Effective"]
+  }
+
+  const getVendorForProduct = (product: ApiProduct): string => {
+    const vendors = [
+      'CleanTech Solutions', 'PowerClean Kenya', 'FloorMaster Pro', 
+      'EcoSteam Ltd', 'CarpetCare Pro', 'WindowShine Co',
+      'RoboClean Africa', 'IndustrialClean Ltd', 'UltraClean Tech'
+    ]
+    return vendors[Math.floor(Math.random() * vendors.length)]
+  }
+
+  const getRandomDelivery = (): string => {
+    const options = ["Today", "Tomorrow", "2-3 days"]
+    return options[Math.floor(Math.random() * options.length)]
   }
 
   const handleAddToCart = () => {
@@ -223,29 +306,42 @@ export default function ProductPage({ params }: { params: { id: string } }) {
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
         <FixedNavbar cartItemsCount={cartItemsCount} />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading product...</p>
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading Product</h2>
+            <p className="text-gray-600">Fetching product details from database...</p>
           </div>
         </div>
       </div>
     )
   }
 
-  if (!product) {
+  if (error || !product) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
         <FixedNavbar cartItemsCount={cartItemsCount} />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
+          <div className="text-center py-12">
+            <div className="text-red-500 text-4xl mb-4">⚠️</div>
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Product Not Found</h1>
-            <p className="text-gray-600 mb-8">The product you're looking for doesn't exist.</p>
-            <Link 
-              href="/marketplace" 
-              className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors"
-            >
-              Back to Marketplace
-            </Link>
+            <p className="text-gray-600 mb-8">
+              {error || "The product you're looking for doesn't exist in our database."}
+            </p>
+            <div className="flex gap-4 justify-center">
+              <Link 
+                href="/marketplace" 
+                className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                Back to Marketplace
+              </Link>
+              <Button 
+                onClick={loadProductData}
+                variant="outline"
+                className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+              >
+                Try Again
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -275,7 +371,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             <div className="flex-1">
               <p className="font-semibold text-gray-900 text-sm">Added to Cart!</p>
               <p className="text-gray-600 text-xs truncate">{product.name}</p>
-              <p className="text-emerald-600 font-bold text-sm">Qty: {quantity} • KSh {product.price * quantity}</p>
+              <p className="text-emerald-600 font-bold text-sm">Qty: {quantity} • KSh {(product.price * quantity).toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -361,7 +457,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                 </Badge>
                 <Badge className="bg-blue-500 text-white">
                   <Crown className="w-3 h-3 mr-1" />
-                  EcoClean's Choice
+                  CleanCart's Choice
                 </Badge>
                 {product.coupon && (
                   <Badge className="bg-purple-500 text-white">
@@ -402,12 +498,12 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             {/* Price */}
             <div className="flex items-center gap-3">
               <span className="text-4xl font-bold text-emerald-600">
-                KSh {product.price}
+                KSh {product.price.toLocaleString()}
               </span>
               {product.originalPrice && product.originalPrice > product.price && (
                 <>
                   <span className="text-2xl text-gray-500 line-through">
-                    KSh {product.originalPrice}
+                    KSh {product.originalPrice.toLocaleString()}
                   </span>
                   <Badge className="bg-red-500 text-white text-lg">
                     Save {discount}%
@@ -497,7 +593,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                   </Button>
                 </div>
                 <span className="text-sm text-gray-600">
-                  Total: <span className="font-semibold text-emerald-600">KSh {product.price * quantity}</span>
+                  Total: <span className="font-semibold text-emerald-600">KSh {(product.price * quantity).toLocaleString()}</span>
                 </span>
               </div>
 
@@ -726,9 +822,9 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-lg font-bold text-emerald-600">KSh {relatedProduct.price}</span>
+                      <span className="text-lg font-bold text-emerald-600">KSh {relatedProduct.price.toLocaleString()}</span>
                       {relatedProduct.originalPrice && (
-                        <span className="text-sm text-gray-500 line-through ml-2">KSh {relatedProduct.originalPrice}</span>
+                        <span className="text-sm text-gray-500 line-through ml-2">KSh {relatedProduct.originalPrice.toLocaleString()}</span>
                       )}
                     </div>
                     <Link href={`/product/${relatedProduct.id}`}>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +29,9 @@ import {
   Crown,
   MessageSquare,
   Settings,
-  Truck
+  Truck,
+  Loader2,
+  RefreshCw
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -38,94 +40,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-// Mock customers data
-const mockCustomers = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    email: "sarah.j@email.com",
-    phone: "+254 712 345 678",
-    location: "Nairobi, Kenya",
-    joinDate: "2023-11-15",
-    totalOrders: 12,
-    totalSpent: 45200,
-    lastOrder: "2024-01-20",
-    status: "active",
-    loyaltyTier: "gold",
-    averageOrderValue: 3767
-  },
-  {
-    id: 2,
-    name: "Mike Otieno",
-    email: "mike.o@email.com",
-    phone: "+254 723 456 789",
-    location: "Mombasa, Kenya",
-    joinDate: "2023-12-01",
-    totalOrders: 8,
-    totalSpent: 28750,
-    lastOrder: "2024-01-19",
-    status: "active",
-    loyaltyTier: "silver",
-    averageOrderValue: 3594
-  },
-  {
-    id: 3,
-    name: "Grace Wambui",
-    email: "grace.w@email.com",
-    phone: "+254 734 567 890",
-    location: "Kisumu, Kenya",
-    joinDate: "2024-01-05",
-    totalOrders: 3,
-    totalSpent: 9600,
-    lastOrder: "2024-01-18",
-    status: "active",
-    loyaltyTier: "bronze",
-    averageOrderValue: 3200
-  },
-  {
-    id: 4,
-    name: "David Kimani",
-    email: "david.k@email.com",
-    phone: "+254 745 678 901",
-    location: "Nakuru, Kenya",
-    joinDate: "2023-10-20",
-    totalOrders: 15,
-    totalSpent: 67800,
-    lastOrder: "2024-01-17",
-    status: "active",
-    loyaltyTier: "gold",
-    averageOrderValue: 4520
-  },
-  {
-    id: 5,
-    name: "Lisa Adhiambo",
-    email: "lisa.a@email.com",
-    phone: "+254 756 789 012",
-    location: "Eldoret, Kenya",
-    joinDate: "2024-01-10",
-    totalOrders: 1,
-    totalSpent: 5400,
-    lastOrder: "2024-01-16",
-    status: "new",
-    loyaltyTier: "bronze",
-    averageOrderValue: 5400
-  },
-  {
-    id: 6,
-    name: "James Mwangi",
-    email: "james.m@email.com",
-    phone: "+254 767 890 123",
-    location: "Thika, Kenya",
-    joinDate: "2023-09-15",
-    totalOrders: 0,
-    totalSpent: 0,
-    lastOrder: null,
-    status: "inactive",
-    loyaltyTier: "new",
-    averageOrderValue: 0
-  }
-]
 
 // All the vendor sections for the sub-navbar
 const vendorSections = [
@@ -228,23 +142,83 @@ const loyaltyConfig = {
   new: { label: "New", color: "bg-blue-100 text-blue-800 border-blue-200" }
 }
 
+interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  joinDate: string;
+  totalOrders: number;
+  totalSpent: number;
+  lastOrder: string | null;
+  status: string;
+  loyaltyTier: string;
+  averageOrderValue: number;
+}
+
+interface CustomerStats {
+  totalCustomers: number;
+  activeCustomers: number;
+  newCustomers: number;
+  totalRevenue: number;
+  averageOrderValue: number;
+}
+
 export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [selectedLoyalty, setSelectedLoyalty] = useState("all")
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [stats, setStats] = useState<CustomerStats>({
+    totalCustomers: 0,
+    activeCustomers: 0,
+    newCustomers: 0,
+    totalRevenue: 0,
+    averageOrderValue: 0
+  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const statuses = ["all", "active", "new", "inactive"]
   const loyaltyTiers = ["all", "gold", "silver", "bronze", "new"]
 
-  const filteredCustomers = mockCustomers.filter(customer => {
-    const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         customer.location.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = selectedStatus === "all" || customer.status === selectedStatus
-    const matchesLoyalty = selectedLoyalty === "all" || customer.loyaltyTier === selectedLoyalty
-    
-    return matchesSearch && matchesStatus && matchesLoyalty
-  })
+  // Fetch customers from database
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        const params = new URLSearchParams()
+        if (searchTerm) params.append('search', searchTerm)
+        if (selectedStatus !== 'all') params.append('status', selectedStatus)
+        if (selectedLoyalty !== 'all') params.append('loyalty', selectedLoyalty)
+
+        const response = await fetch(`/api/vendor/customers?${params}`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch customers')
+        }
+        
+        const result = await response.json()
+        setCustomers(result.data.customers)
+        setStats(result.data.stats)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+        console.error('Error fetching customers:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    // Debounce search to avoid too many API calls
+    const timeoutId = setTimeout(() => {
+      fetchCustomers()
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm, selectedStatus, selectedLoyalty])
 
   const getStatusBadge = (status: string) => {
     const config = statusConfig[status as keyof typeof statusConfig]
@@ -265,14 +239,34 @@ export default function CustomersPage() {
     )
   }
 
-  // Calculate customer statistics
-  const totalCustomers = filteredCustomers.length
-  const activeCustomers = filteredCustomers.filter(c => c.status === 'active').length
-  const newCustomers = filteredCustomers.filter(c => c.status === 'new').length
-  const totalRevenue = filteredCustomers.reduce((sum, customer) => sum + customer.totalSpent, 0)
-  const averageOrderValue = filteredCustomers.length > 0 
-    ? Math.round(filteredCustomers.reduce((sum, customer) => sum + customer.averageOrderValue, 0) / filteredCustomers.length)
-    : 0
+  const handleRefresh = () => {
+    const params = new URLSearchParams()
+    if (searchTerm) params.append('search', searchTerm)
+    if (selectedStatus !== 'all') params.append('status', selectedStatus)
+    if (selectedLoyalty !== 'all') params.append('loyalty', selectedLoyalty)
+
+    fetch(`/api/vendor/customers?${params}`)
+      .then(response => response.json())
+      .then(result => {
+        setCustomers(result.data.customers)
+        setStats(result.data.stats)
+      })
+      .catch(err => {
+        console.error('Error refreshing customers:', err)
+      })
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Customers</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -287,6 +281,15 @@ export default function CustomersPage() {
             <Download className="w-4 h-4" />
             Export
           </Button>
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Add Customer
@@ -294,7 +297,7 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      {/* Vendor Sections Sub-Navbar - ADDED THIS SECTION */}
+      {/* Vendor Sections Sub-Navbar */}
       <div className="bg-white rounded-lg border shadow-sm">
         <div className="px-4 py-3 border-b">
           <h3 className="text-sm font-medium text-gray-900">Quick Access</h3>
@@ -327,7 +330,7 @@ export default function CustomersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Customers</p>
-                <p className="text-2xl font-bold text-gray-900">{totalCustomers}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalCustomers}</p>
               </div>
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Users className="w-5 h-5 text-blue-600" />
@@ -340,7 +343,7 @@ export default function CustomersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Active Customers</p>
-                <p className="text-2xl font-bold text-gray-900">{activeCustomers}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.activeCustomers}</p>
               </div>
               <div className="p-2 bg-green-100 rounded-lg">
                 <User className="w-5 h-5 text-green-600" />
@@ -353,7 +356,7 @@ export default function CustomersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">New This Month</p>
-                <p className="text-2xl font-bold text-gray-900">{newCustomers}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.newCustomers}</p>
               </div>
               <div className="p-2 bg-purple-100 rounded-lg">
                 <TrendingUp className="w-5 h-5 text-purple-600" />
@@ -366,7 +369,7 @@ export default function CustomersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Avg. Order Value</p>
-                <p className="text-2xl font-bold text-gray-900">KSh {averageOrderValue.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">KSh {stats.averageOrderValue.toLocaleString()}</p>
               </div>
               <div className="p-2 bg-orange-100 rounded-lg">
                 <ShoppingCart className="w-5 h-5 text-orange-600" />
@@ -431,119 +434,129 @@ export default function CustomersPage() {
         </CardContent>
       </Card>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+          <span className="ml-2 text-gray-600">Loading customers...</span>
+        </div>
+      )}
+
       {/* Customers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCustomers.map((customer) => (
-          <Card key={customer.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-            <CardHeader className="p-4 pb-2">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-semibold">{customer.name}</CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      {getStatusBadge(customer.status)}
-                      {getLoyaltyBadge(customer.loyaltyTier)}
+      {!isLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {customers.map((customer) => (
+            <Card key={customer.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              <CardHeader className="p-4 pb-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <User className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-semibold">{customer.name}</CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        {getStatusBadge(customer.status)}
+                        {getLoyaltyBadge(customer.loyaltyTier)}
+                      </div>
                     </div>
                   </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem className="flex items-center gap-2">
+                        <Eye className="w-4 h-4" />
+                        View Profile
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        Send Email
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center gap-2">
+                        <ShoppingCart className="w-4 h-4" />
+                        View Orders
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem className="flex items-center gap-2">
-                      <Eye className="w-4 h-4" />
-                      View Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      Send Email
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="flex items-center gap-2">
-                      <ShoppingCart className="w-4 h-4" />
-                      View Orders
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="p-4 pt-2">
-              {/* Contact Information */}
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Mail className="w-4 h-4" />
-                  {customer.email}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Phone className="w-4 h-4" />
-                  {customer.phone}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <MapPin className="w-4 h-4" />
-                  {customer.location}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar className="w-4 h-4" />
-                  Joined {customer.joinDate}
-                </div>
-              </div>
-
-              {/* Customer Stats */}
-              <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900">{customer.totalOrders}</p>
-                  <p className="text-xs text-gray-600">Orders</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-bold text-gray-900">KSh {customer.totalSpent.toLocaleString()}</p>
-                  <p className="text-xs text-gray-600">Total Spent</p>
-                </div>
-              </div>
-
-              {/* Last Order */}
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium text-blue-900">Last Order</p>
-                    <p className="text-xs text-blue-700">
-                      {customer.lastOrder 
-                        ? `On ${customer.lastOrder}` 
-                        : 'No orders yet'
-                      }
-                    </p>
+              </CardHeader>
+              
+              <CardContent className="p-4 pt-2">
+                {/* Contact Information */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Mail className="w-4 h-4" />
+                    {customer.email}
                   </div>
-                  {customer.lastOrder && (
-                    <Badge variant="outline" className="bg-white text-blue-700">
-                      KSh {customer.averageOrderValue.toLocaleString()} avg
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Phone className="w-4 h-4" />
+                    {customer.phone}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <MapPin className="w-4 h-4" />
+                    {customer.location}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Calendar className="w-4 h-4" />
+                    Joined {customer.joinDate}
+                  </div>
                 </div>
-              </div>
 
-              {/* Actions */}
-              <div className="flex gap-2 mt-4">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Mail className="w-4 h-4 mr-1" />
-                  Email
-                </Button>
-                <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700">
-                  <Eye className="w-4 h-4 mr-1" />
-                  View
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                {/* Customer Stats */}
+                <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-gray-900">{customer.totalOrders}</p>
+                    <p className="text-xs text-gray-600">Orders</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-gray-900">KSh {customer.totalSpent.toLocaleString()}</p>
+                    <p className="text-xs text-gray-600">Total Spent</p>
+                  </div>
+                </div>
+
+                {/* Last Order */}
+                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">Last Order</p>
+                      <p className="text-xs text-blue-700">
+                        {customer.lastOrder 
+                          ? `On ${customer.lastOrder}` 
+                          : 'No orders yet'
+                        }
+                      </p>
+                    </div>
+                    {customer.lastOrder && (
+                      <Badge variant="outline" className="bg-white text-blue-700">
+                        KSh {customer.averageOrderValue.toLocaleString()} avg
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 mt-4">
+                  <Button variant="outline" size="sm" className="flex-1">
+                    <Mail className="w-4 h-4 mr-1" />
+                    Email
+                  </Button>
+                  <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700">
+                    <Eye className="w-4 h-4 mr-1" />
+                    View
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Empty State */}
-      {filteredCustomers.length === 0 && (
+      {!isLoading && customers.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -569,7 +582,7 @@ export default function CustomersPage() {
       )}
 
       {/* Customer Insights Section */}
-      {filteredCustomers.length > 0 && (
+      {!isLoading && customers.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -587,8 +600,8 @@ export default function CustomersPage() {
                 <h4 className="font-semibold text-gray-900">Loyalty Tier Distribution</h4>
                 <div className="space-y-2">
                   {['gold', 'silver', 'bronze', 'new'].map(tier => {
-                    const count = filteredCustomers.filter(c => c.loyaltyTier === tier).length
-                    const percentage = totalCustomers > 0 ? Math.round((count / totalCustomers) * 100) : 0
+                    const count = customers.filter(c => c.loyaltyTier === tier).length
+                    const percentage = customers.length > 0 ? Math.round((count / customers.length) * 100) : 0
                     return (
                       <div key={tier} className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
@@ -613,7 +626,7 @@ export default function CustomersPage() {
                 <h4 className="font-semibold text-gray-900">Revenue by Tier</h4>
                 <div className="space-y-2">
                   {['gold', 'silver', 'bronze'].map(tier => {
-                    const revenue = filteredCustomers
+                    const revenue = customers
                       .filter(c => c.loyaltyTier === tier)
                       .reduce((sum, customer) => sum + customer.totalSpent, 0)
                     return (
@@ -638,7 +651,7 @@ export default function CustomersPage() {
               <div className="space-y-3">
                 <h4 className="font-semibold text-gray-900">Top Customers</h4>
                 <div className="space-y-2">
-                  {filteredCustomers
+                  {customers
                     .sort((a, b) => b.totalSpent - a.totalSpent)
                     .slice(0, 3)
                     .map((customer, index) => (
