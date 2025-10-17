@@ -299,7 +299,7 @@ export default function OrdersPage() {
     return storedCustomerId || '65f8a1b4c8d9e8a1b4c8d9e8' // Demo customer ID
   }
 
-  // Fetch orders from MongoDB using customer ID
+  // Fetch orders from MongoDB using customer ID - FIXED URL
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -309,7 +309,8 @@ export default function OrdersPage() {
         const customerId = getCustomerId()
         console.log('🔄 Fetching orders for customer:', customerId)
         
-        const response = await fetch(`http://localhost:5000/api/customer-orders/customer/${customerId}`)
+        // FIXED: Using correct backend URL
+        const response = await fetch(`http://localhost:5000/api/orders/customer/${customerId}`)
         
         if (!response.ok) {
           throw new Error(`Failed to fetch orders: ${response.statusText}`)

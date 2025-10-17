@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +29,7 @@ import {
   Loader2
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +37,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-// All the vendor sections for the sub-navbar
+// Environment configuration
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+// All the vendor sections for the sub-navbar (removed duplicate Add Product)
 const vendorSections = [
   {
     id: "dashboard",
@@ -171,6 +175,118 @@ interface ProductsStats {
   totalOrders: number;
 }
 
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+// Custom hook for vendor ID
+const useVendorId = () => {
+  const [vendorId, setVendorId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const getVendorId = () => {
+      console.log('🔍 Getting vendor ID...');
+      
+      // Try to get from vendor auth context first
+      try {
+        // Check if we have vendor data in localStorage from login
+        const storedVendor = localStorage.getItem('vendor');
+        console.log('📦 localStorage vendor:', storedVendor);
+        
+        if (storedVendor) {
+          const vendorData = JSON.parse(storedVendor);
+          console.log('📦 Parsed vendor data:', vendorData);
+          
+          if (vendorData._id || vendorData.id) {
+            const vendorId = vendorData._id || vendorData.id;
+            console.log('✅ Using vendor ID from localStorage:', vendorId);
+            return vendorId;
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error getting vendor from localStorage:', error);
+      }
+
+      // Try to get from session storage
+      try {
+        const sessionVendor = sessionStorage.getItem('vendor');
+        console.log('📦 sessionStorage vendor:', sessionVendor);
+        
+        if (sessionVendor) {
+          const vendorData = JSON.parse(sessionVendor);
+          if (vendorData._id || vendorData.id) {
+            const vendorId = vendorData._id || vendorData.id;
+            console.log('✅ Using vendor ID from sessionStorage:', vendorId);
+            return vendorId;
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error getting vendor from sessionStorage:', error);
+      }
+
+      // Check all localStorage keys to see what's available
+      console.log('🔍 All localStorage keys:', Object.keys(localStorage));
+      
+      // Check for any vendor-related keys
+      const vendorKeys = Object.keys(localStorage).filter(key => 
+        key.toLowerCase().includes('vendor') || 
+        key.toLowerCase().includes('user') ||
+        key.toLowerCase().includes('auth')
+      );
+      console.log('🔍 Vendor-related keys:', vendorKeys);
+      
+      // Check each vendor-related key
+      vendorKeys.forEach(key => {
+        try {
+          const value = localStorage.getItem(key);
+          console.log(`🔍 ${key}:`, value);
+        } catch (error) {
+          console.error(`❌ Error reading ${key}:`, error);
+        }
+      });
+
+      // Based on your backend logs, the actual vendor ID should be '68efb302ffa9682bb4a9bf81'
+      console.log('⚠️ Using fallback vendor ID from login logs');
+      return '68efb302ffa9682bb4a9bf81';
+    };
+
+    setVendorId(getVendorId());
+  }, []);
+  
+  return vendorId;
+};
+
+// Retry mechanism for API calls
+const fetchWithRetry = async (url: string, options: RequestInit = {}, retries = 2): Promise<Response> => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok) return response;
+      
+      if (i < retries - 1) {
+        console.log(`🔄 Retrying request... ${retries - i - 1} attempts left`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+      }
+    } catch (error) {
+      if (i < retries - 1) {
+        console.log(`🔄 Retrying failed request... ${retries - i - 1} attempts left`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error('All retry attempts failed');
+};
+
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -186,51 +302,51 @@ export default function ProductsPage() {
   })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
+  const vendorId = useVendorId();
+  const router = useRouter();
   const categories = ["all", "Household Cleaners", "Industrial Equipment", "Eco-Friendly Products", "Waste Management", "Pest Control", "Hospitality Supplies"]
   const statuses = ["all", "active", "draft", "low_stock", "out_of_stock"]
-
-  // Get vendor ID from localStorage (same as in add product page)
-  const getVendorId = () => {
-    const storedVendor = localStorage.getItem('vendor');
-    if (storedVendor) {
-      try {
-        const vendorData = JSON.parse(storedVendor);
-        return vendorData._id || vendorData.id;
-      } catch (error) {
-        console.error('Error parsing vendor data:', error);
-      }
-    }
-    return '68efb302ffa9682bb4a9bf81'; // Fallback vendor ID
-  }
 
   // Fetch vendor's products from backend
   useEffect(() => {
     const fetchProducts = async () => {
+      if (!vendorId) return;
+
       try {
         setIsLoading(true)
         setError(null)
         
-        const vendorId = getVendorId()
+        console.log('🔄 Fetching products for vendor:', vendorId)
+        
         if (!vendorId) {
           throw new Error('Vendor ID not found. Please log in again.')
         }
 
-        console.log('🔄 Fetching products for vendor:', vendorId)
-        
         // Build query parameters
         const params = new URLSearchParams()
         if (searchTerm) params.append('search', searchTerm)
         if (selectedCategory !== 'all') params.append('category', selectedCategory)
         if (selectedStatus !== 'all') params.append('status', selectedStatus)
 
-        const response = await fetch(`http://localhost:5000/api/products/vendor/${vendorId}?${params}`)
+        const apiUrl = `${API_BASE}/api/products/vendor/${vendorId}?${params}`
+        console.log('🌐 API URL:', apiUrl)
+
+        const response = await fetchWithRetry(apiUrl)
+        
+        console.log('📡 Response status:', response.status)
+        console.log('📡 Response headers:', response.headers)
         
         if (!response.ok) {
-          throw new Error(`Failed to fetch products: ${response.statusText}`)
+          const errorText = await response.text()
+          console.error('❌ Response error text:', errorText)
+          throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`)
         }
         
-        const result = await response.json()
+        const result = await response.json() as ApiResponse<Product[]>
+        console.log('📦 API Response:', result)
         
         if (result.success && result.data) {
           console.log(`✅ Loaded ${result.data.length} products from database`)
@@ -252,7 +368,7 @@ export default function ProductsPage() {
             totalOrders: result.data.reduce((sum: number, p: Product) => sum + (p.reviewCount || 0), 0) // Using reviewCount as order count for now
           })
         } else {
-          throw new Error('No products found in response')
+          throw new Error(result.message || 'No products found in response')
         }
       } catch (err) {
         console.error('❌ Error fetching products:', err)
@@ -268,7 +384,11 @@ export default function ProductsPage() {
     }, 500)
 
     return () => clearTimeout(timeoutId)
-  }, [searchTerm, selectedCategory, selectedStatus])
+  }, [searchTerm, selectedCategory, selectedStatus, vendorId, refreshKey])
+
+  const refreshProducts = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   const getStatusBadge = (status: string) => {
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active
@@ -285,13 +405,26 @@ export default function ProductsPage() {
     }
   }
 
-  const handleDeleteProduct = async (productId: string) => {
+  const handleViewProduct = useCallback((productId: string) => {
+    console.log('👀 Viewing product:', productId);
+    // Navigate to product details page
+    router.push(`/vendor/products/${productId}`);
+  }, [router]);
+
+  const handleEditProduct = useCallback((productId: string) => {
+    console.log('✏️ Editing product:', productId);
+    // Navigate to edit product page
+    router.push(`/vendor/products/edit/${productId}`);
+  }, [router]);
+
+  const handleDeleteProduct = useCallback(async (productId: string) => {
     if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) return
 
     try {
+      setActionLoading(`delete-${productId}`)
       console.log('🗑️ Deleting product:', productId)
       
-      const response = await fetch(`http://localhost:5000/api/products/${productId}`, {
+      const response = await fetchWithRetry(`${API_BASE}/api/products/${productId}`, {
         method: 'DELETE',
       })
 
@@ -299,7 +432,7 @@ export default function ProductsPage() {
         throw new Error('Failed to delete product')
       }
 
-      const result = await response.json()
+      const result = await response.json() as ApiResponse<null>
       
       if (result.success) {
         console.log('✅ Product deleted successfully')
@@ -310,20 +443,24 @@ export default function ProductsPage() {
           ...prev,
           totalProducts: prev.totalProducts - 1
         }))
+        refreshProducts();
       } else {
         throw new Error(result.message || 'Failed to delete product')
       }
     } catch (err) {
       console.error('❌ Error deleting product:', err)
       alert('Failed to delete product. Please try again.')
+    } finally {
+      setActionLoading(null)
     }
-  }
+  }, [])
 
-  const handleArchiveProduct = async (productId: string) => {
+  const handleArchiveProduct = useCallback(async (productId: string) => {
     try {
+      setActionLoading(`archive-${productId}`)
       console.log('📦 Archiving product:', productId)
       
-      const response = await fetch(`http://localhost:5000/api/products/${productId}`, {
+      const response = await fetchWithRetry(`${API_BASE}/api/products/${productId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -337,7 +474,7 @@ export default function ProductsPage() {
         throw new Error('Failed to archive product')
       }
 
-      const result = await response.json()
+      const result = await response.json() as ApiResponse<Product>
       
       if (result.success) {
         console.log('✅ Product archived successfully')
@@ -345,20 +482,24 @@ export default function ProductsPage() {
         setProducts(prev => prev.map(p => 
           p._id === productId ? { ...p, status: 'archived' } : p
         ))
+        refreshProducts();
       } else {
         throw new Error(result.message || 'Failed to archive product')
       }
     } catch (err) {
       console.error('❌ Error archiving product:', err)
       alert('Failed to archive product. Please try again.')
+    } finally {
+      setActionLoading(null)
     }
-  }
+  }, [])
 
-  const handleActivateProduct = async (productId: string) => {
+  const handleActivateProduct = useCallback(async (productId: string) => {
     try {
+      setActionLoading(`activate-${productId}`)
       console.log('🚀 Activating product:', productId)
       
-      const response = await fetch(`http://localhost:5000/api/products/${productId}`, {
+      const response = await fetchWithRetry(`${API_BASE}/api/products/${productId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -372,7 +513,7 @@ export default function ProductsPage() {
         throw new Error('Failed to activate product')
       }
 
-      const result = await response.json()
+      const result = await response.json() as ApiResponse<Product>
       
       if (result.success) {
         console.log('✅ Product activated successfully')
@@ -380,14 +521,17 @@ export default function ProductsPage() {
         setProducts(prev => prev.map(p => 
           p._id === productId ? { ...p, status: 'active' } : p
         ))
+        refreshProducts();
       } else {
         throw new Error(result.message || 'Failed to activate product')
       }
     } catch (err) {
       console.error('❌ Error activating product:', err)
       alert('Failed to activate product. Please try again.')
+    } finally {
+      setActionLoading(null)
     }
-  }
+  }, [])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -403,7 +547,21 @@ export default function ProductsPage() {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Products</h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <div className="space-y-2">
+            <Button onClick={() => window.location.reload()} className="bg-green-600 hover:bg-green-700">
+              Try Again
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.reload();
+              }}
+            >
+              Clear Storage & Reload
+            </Button>
+          </div>
         </div>
       </div>
     )
@@ -621,11 +779,17 @@ export default function ProductsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="flex items-center gap-2">
+                      <DropdownMenuItem 
+                        className="flex items-center gap-2"
+                        onClick={() => handleViewProduct(product._id)}
+                      >
                         <Eye className="w-4 h-4" />
                         View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-2">
+                      <DropdownMenuItem 
+                        className="flex items-center gap-2"
+                        onClick={() => handleEditProduct(product._id)}
+                      >
                         <Edit className="w-4 h-4" />
                         Edit Product
                       </DropdownMenuItem>
@@ -633,26 +797,41 @@ export default function ProductsPage() {
                         <DropdownMenuItem 
                           className="flex items-center gap-2 text-green-600"
                           onClick={() => handleActivateProduct(product._id)}
+                          disabled={actionLoading === `activate-${product._id}`}
                         >
-                          <Package className="w-4 h-4" />
-                          Activate
+                          {actionLoading === `activate-${product._id}` ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Package className="w-4 h-4" />
+                          )}
+                          {actionLoading === `activate-${product._id}` ? 'Activating...' : 'Activate'}
                         </DropdownMenuItem>
                       )}
                       {product.status === 'active' && (
                         <DropdownMenuItem 
                           className="flex items-center gap-2"
                           onClick={() => handleArchiveProduct(product._id)}
+                          disabled={actionLoading === `archive-${product._id}`}
                         >
-                          <Archive className="w-4 h-4" />
-                          Archive
+                          {actionLoading === `archive-${product._id}` ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Archive className="w-4 h-4" />
+                          )}
+                          {actionLoading === `archive-${product._id}` ? 'Archiving...' : 'Archive'}
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem 
                         className="flex items-center gap-2 text-red-600"
                         onClick={() => handleDeleteProduct(product._id)}
+                        disabled={actionLoading === `delete-${product._id}`}
                       >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
+                        {actionLoading === `delete-${product._id}` ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                        {actionLoading === `delete-${product._id}` ? 'Deleting...' : 'Delete'}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -697,13 +876,32 @@ export default function ProductsPage() {
                 )}
 
                 <div className="flex gap-2 mt-4">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <Edit className="w-4 h-4 mr-1" />
-                    Edit
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => handleEditProduct(product._id)}
+                    disabled={actionLoading === `edit-${product._id}`}
+                  >
+                    {actionLoading === `edit-${product._id}` ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                    ) : (
+                      <Edit className="w-4 h-4 mr-1" />
+                    )}
+                    {actionLoading === `edit-${product._id}` ? 'Editing...' : 'Edit'}
                   </Button>
-                  <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700">
-                    <Eye className="w-4 h-4 mr-1" />
-                    View
+                  <Button 
+                    size="sm" 
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    onClick={() => handleViewProduct(product._id)}
+                    disabled={actionLoading === `view-${product._id}`}
+                  >
+                    {actionLoading === `view-${product._id}` ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                    ) : (
+                      <Eye className="w-4 h-4 mr-1" />
+                    )}
+                    {actionLoading === `view-${product._id}` ? 'Loading...' : 'View'}
                   </Button>
                 </div>
               </CardContent>

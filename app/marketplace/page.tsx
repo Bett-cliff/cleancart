@@ -47,7 +47,9 @@ import {
   Gift,
   TrendingDown,
   FileText,
-  Calculator
+  Calculator,
+  Loader2,
+  RefreshCw
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -56,7 +58,87 @@ import { useCart } from "@/app/contexts/CartContext"
 import FixedNavbar from "@/app/components/FixedNavbar"
 import ProductSearch from "@/app/components/search/ProductSearch"
 import { useRouter } from "next/navigation"
-import { fetchProducts, type Product as ApiProduct } from "@/lib/api"
+
+// Environment configuration
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+// Interface for product data
+interface Product {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  stock: number;
+  status: string;
+  category: string;
+  images: string[];
+  vendorId: string;
+  vendor: {
+    _id: string;
+    businessName: string;
+    businessEmail: string;
+    phoneNumber: string;
+    location: string;
+    isVerified: boolean;
+    rating: number;
+    reviewCount: number;
+    joinedDate: string;
+    description: string;
+    specialties: string[];
+  };
+  specifications: Array<{ key: string; value: string }>;
+  rating: number;
+  reviewCount: number;
+  createdAt: string;
+  updatedAt: string;
+  isEcoFriendly: boolean;
+  isFeatured: boolean;
+  variants: Array<{
+    name: string;
+    price: number;
+    stock: number;
+    sku: string;
+    attributes: {
+      size?: string;
+      color?: string;
+    };
+  }>;
+}
+
+// Interface for transformed product data
+interface Deal {
+  id: string;
+  name: string;
+  originalPrice: number;
+  price: number;
+  discount: number;
+  image: string;
+  sold: number;
+  total: number;
+  features: string[];
+  type: string;
+  category: string;
+  rating: number;
+  reviewCount: number;
+  delivery: string;
+  vendor: string;
+  vendorId: string;
+  vendorDetails: {
+    businessName: string;
+    isVerified: boolean;
+    rating: number;
+    location: string;
+    joinedDate: string;
+  };
+  isAmazonChoice: boolean;
+  isBestSeller: boolean;
+  stock: string;
+  coupon: string | null;
+  isSponsored?: boolean;
+  adLabel?: string;
+  lastUpdated: string;
+}
 
 // Enhanced vendors data with more details
 const cleaningVendors = [
@@ -214,12 +296,21 @@ const premiumAds = {
       discount: 29,
       description: "Complete professional cleaning kit with premium tools",
       vendor: "Featured Partner",
+      vendorId: "sponsored",
+      vendorDetails: {
+        businessName: "Featured Partner",
+        isVerified: true,
+        rating: 4.9,
+        location: "Nairobi",
+        joinedDate: "2023"
+      },
       rating: 4.9,
       reviewCount: 124,
       delivery: "Today",
       isSponsored: true,
       adLabel: "Sponsored",
-      features: ["10+ Tools Included", "Professional Grade", "Lifetime Support"]
+      features: ["10+ Tools Included", "Professional Grade", "Lifetime Support"],
+      lastUpdated: new Date().toISOString()
     }
   ],
   
@@ -285,6 +376,7 @@ const sidebarProducts = [
     rating: 4.6,
     delivery: "Tomorrow",
     vendor: "QuickClean Supplies",
+    vendorId: "quickclean",
     image: "/api/placeholder/60/60"
   },
   {
@@ -294,6 +386,7 @@ const sidebarProducts = [
     rating: 4.8,
     delivery: "Today",
     vendor: "GreenLife Products",
+    vendorId: "greenlife",
     image: "/api/placeholder/60/60"
   },
   {
@@ -303,41 +396,100 @@ const sidebarProducts = [
     rating: 4.4,
     delivery: "Tomorrow", 
     vendor: "Spotless Solutions",
+    vendorId: "spotless",
     image: "/api/placeholder/60/60"
   }
 ]
 
-// Interface for transformed product data
-interface Deal {
-  id: string;
-  name: string;
-  originalPrice: number;
-  price: number;
-  discount: number;
-  image: string;
-  sold: number;
-  total: number;
-  features: string[];
-  type: string;
-  category: string;
-  rating: number;
-  reviewCount: number;
-  delivery: string;
-  vendor: string;
-  isAmazonChoice: boolean;
-  isBestSeller: boolean;
-  stock: string;
-  coupon: string | null;
-  isSponsored?: boolean;
-  adLabel?: string;
-}
-
 // Recently viewed products (simulated data)
 const recentlyViewed = [
-  { id: "9", name: "Glass Cleaner Spray", price: 850, image: "/api/placeholder/100/100", viewedAt: "2 hours ago", vendor: "Sparkle Pro Clean", type: "Cleaner", features: ["Streak-Free", "Quick Dry"], delivery: "Tomorrow", stock: "In stock" },
-  { id: "10", name: "Antibacterial Wipes", price: 1200, image: "/api/placeholder/100/100", viewedAt: "1 day ago", vendor: "Eco Clean Solutions", type: "Disinfectant", features: ["Kills 99.9% Germs", "Biodegradable"], delivery: "Today", stock: "In stock" },
-  { id: "11", name: "Carpet Cleaner", price: 2100, image: "/api/placeholder/100/100", viewedAt: "3 days ago", vendor: "Industrial Clean KE", type: "Equipment", features: ["Deep Clean", "Stain Removal"], delivery: "2-3 days", stock: "In stock" }
+  { 
+    id: "9", 
+    name: "Glass Cleaner Spray", 
+    price: 850, 
+    image: "/api/placeholder/100/100", 
+    viewedAt: "2 hours ago", 
+    vendor: "Sparkle Pro Clean", 
+    vendorId: "sparkle-pro-clean",
+    type: "Cleaner", 
+    features: ["Streak-Free", "Quick Dry"], 
+    delivery: "Tomorrow", 
+    stock: "In stock" 
+  },
+  { 
+    id: "10", 
+    name: "Antibacterial Wipes", 
+    price: 1200, 
+    image: "/api/placeholder/100/100", 
+    viewedAt: "1 day ago", 
+    vendor: "Eco Clean Solutions", 
+    vendorId: "eco-clean-solutions",
+    type: "Disinfectant", 
+    features: ["Kills 99.9% Germs", "Biodegradable"], 
+    delivery: "Today", 
+    stock: "In stock" 
+  },
+  { 
+    id: "11", 
+    name: "Carpet Cleaner", 
+    price: 2100, 
+    image: "/api/placeholder/100/100", 
+    viewedAt: "3 days ago", 
+    vendor: "Industrial Clean KE", 
+    vendorId: "industrial-clean-ke",
+    type: "Equipment", 
+    features: ["Deep Clean", "Stain Removal"], 
+    delivery: "2-3 days", 
+    stock: "In stock" 
+  }
 ]
+
+// Fetch products function with real-time updates
+const fetchProducts = async (lastUpdate?: string) => {
+  try {
+    console.log('🔄 Fetching products from API...');
+    
+    const url = lastUpdate 
+      ? `${API_BASE}/api/products?lastUpdate=${lastUpdate}`
+      : `${API_BASE}/api/products`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    console.log('📡 Response status:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('📦 API Response received');
+    
+    if (result.success && result.data) {
+      console.log(`✅ Loaded ${result.data.length} products from database`);
+      return {
+        success: true,
+        products: result.data,
+        lastUpdate: result.lastUpdate || new Date().toISOString()
+      };
+    } else {
+      throw new Error(result.message || 'No products found in response');
+    }
+  } catch (error) {
+    console.error('❌ Error fetching products:', error);
+    throw error;
+  }
+};
 
 // Enhanced Vendor Card Component
 const VendorCard = ({ vendor }: { vendor: any }) => {
@@ -444,6 +596,7 @@ const DealCard = ({ deal }: { deal: Deal }) => {
       name: deal.name,
       price: deal.price,
       vendor: deal.vendor,
+      vendorId: deal.vendorId,
       delivery: deal.delivery,
       image: deal.image
     })
@@ -465,19 +618,33 @@ const DealCard = ({ deal }: { deal: Deal }) => {
       reviewCount: deal.reviewCount,
       features: deal.features,
       vendor: deal.vendor,
+      vendorId: deal.vendorId,
+      vendorDetails: deal.vendorDetails,
       inStock: deal.stock === "In stock" || deal.stock === "Only 5 left" || deal.stock === "Only 3 left",
       sold: deal.sold,
       total: deal.total,
       delivery: deal.delivery,
       coupon: deal.coupon,
       isAmazonChoice: deal.isAmazonChoice,
-      isBestSeller: deal.isBestSeller
+      isBestSeller: deal.isBestSeller,
+      lastUpdated: deal.lastUpdated
     }
     
     console.log('🛒 Navigating to product:', productData.name)
     localStorage.setItem('currentProduct', JSON.stringify(productData))
     router.push(`/product/${deal.id}`)
   }
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  };
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 bg-white relative">
@@ -514,6 +681,21 @@ const DealCard = ({ deal }: { deal: Deal }) => {
       </div>
 
       <CardContent className="p-3">
+        {/* Vendor Info */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-2 h-2 text-white" />
+            </div>
+            <span className="text-xs font-medium text-emerald-700">{deal.vendor}</span>
+          </div>
+          {deal.vendorDetails.isVerified && (
+            <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+              Verified
+            </Badge>
+          )}
+        </div>
+
         {/* Make the entire image area clickable for view details */}
         <div 
           className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg mb-3 overflow-hidden border border-gray-200 relative cursor-pointer"
@@ -527,6 +709,13 @@ const DealCard = ({ deal }: { deal: Deal }) => {
           <div className="absolute bottom-2 left-2">
             <Badge variant="secondary" className="text-xs bg-white/90 backdrop-blur-sm">
               {deal.stock}
+            </Badge>
+          </div>
+
+          {/* Last Updated */}
+          <div className="absolute top-2 right-2">
+            <Badge variant="secondary" className="text-xs bg-black/70 text-white backdrop-blur-sm">
+              Updated {getTimeAgo(deal.lastUpdated)}
             </Badge>
           </div>
         </div>
@@ -625,6 +814,7 @@ const RecentlyViewedCard = ({ product }: { product: any }) => {
       name: product.name,
       price: product.price,
       vendor: product.vendor,
+      vendorId: product.vendorId,
       delivery: product.delivery,
       image: product.image
     })
@@ -636,6 +826,7 @@ const RecentlyViewedCard = ({ product }: { product: any }) => {
       name: product.name,
       price: product.price,
       vendor: product.vendor,
+      vendorId: product.vendorId,
       delivery: product.delivery,
       features: product.features,
       stock: product.stock,
@@ -663,6 +854,9 @@ const RecentlyViewedCard = ({ product }: { product: any }) => {
             <Sparkles className="w-6 h-6 text-gray-400" />
           </div>
           <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1 mb-1">
+              <span className="text-xs font-medium text-emerald-700">{product.vendor}</span>
+            </div>
             <h4 
               className="font-medium text-gray-900 text-sm line-clamp-2 group-hover:text-emerald-600 transition-colors mb-1 cursor-pointer"
               onClick={handleViewDetails}
@@ -713,6 +907,8 @@ const SponsoredProductCard = ({ product }: { product: any }) => {
       discount: product.discount,
       description: product.description,
       vendor: product.vendor,
+      vendorId: product.vendorId,
+      vendorDetails: product.vendorDetails,
       rating: product.rating,
       reviewCount: product.reviewCount,
       delivery: product.delivery,
@@ -720,7 +916,8 @@ const SponsoredProductCard = ({ product }: { product: any }) => {
       image: "/api/placeholder/200/200",
       category: "Sponsored",
       inStock: true,
-      isSponsored: true
+      isSponsored: true,
+      lastUpdated: product.lastUpdated
     }
     
     console.log('🛒 Navigating to product:', productData.name)
@@ -791,6 +988,7 @@ const SponsoredProductCard = ({ product }: { product: any }) => {
                 name: product.name,
                 price: product.price,
                 vendor: product.vendor,
+                vendorId: product.vendorId,
                 delivery: product.delivery,
                 image: product.image
               })}
@@ -954,6 +1152,7 @@ const SidebarProductCard = ({ product }: { product: any }) => {
       name: product.name,
       price: product.price,
       vendor: product.vendor,
+      vendorId: product.vendorId,
       delivery: product.delivery,
       rating: product.rating,
       description: "Popular product with great value and performance.",
@@ -980,6 +1179,9 @@ const SidebarProductCard = ({ product }: { product: any }) => {
             <Sparkles className="w-5 h-5 text-gray-500" />
           </div>
           <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1 mb-1">
+              <span className="text-xs font-medium text-emerald-700">{product.vendor}</span>
+            </div>
             <h4 
               className="font-medium text-gray-900 text-xs line-clamp-2 group-hover:text-emerald-600 transition-colors mb-1 cursor-pointer"
               onClick={handleViewDetails}
@@ -1001,6 +1203,7 @@ const SidebarProductCard = ({ product }: { product: any }) => {
                     name: product.name,
                     price: product.price,
                     vendor: product.vendor,
+                    vendorId: product.vendorId,
                     delivery: product.delivery,
                     image: product.image
                   })}
@@ -1032,104 +1235,157 @@ export default function MarketplacePage() {
   const [isSearching, setIsSearching] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdate, setLastUpdate] = useState<string>('')
+  const [refreshing, setRefreshing] = useState(false)
 
   // Fetch products from MongoDB on component mount
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
+  const loadProducts = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true)
+      } else {
         setLoading(true)
-        const response = await fetchProducts()
-        
-        if (response.success && response.products) {
-          // Transform MongoDB products to deal format
-          const transformedDeals: Deal[] = response.products.map((product: ApiProduct, index: number) => {
-            const categoryMap: { [key: string]: string } = {
-              "industrial-equipment": "Industrial Equipment",
-              "household-cleaners": "Household Cleaners", 
-              "eco-friendly": "Eco-Friendly"
-            }
-            
-            const typeMap: { [key: string]: string } = {
-              "industrial-equipment": "Equipment",
-              "household-cleaners": "Cleaner",
-              "eco-friendly": "Cleaner"
-            }
-            
-            const vendorNames = [
-              "Sparkle Pro Clean", "Eco Clean Solutions", "Industrial Clean KE", 
-              "Home Sparkle Supplies", "CleanTech Kenya", "ProClean Solutions"
-            ]
-            
-            const featuresMap: { [key: string]: string[] } = {
-              "industrial-equipment": ["Professional Grade", "Heavy Duty", "Commercial Use", "Durable"],
-              "household-cleaners": ["All-Purpose", "Safe for Families", "Effective", "Easy to Use"],
-              "eco-friendly": ["Eco-Friendly", "Biodegradable", "Natural Ingredients", "Sustainable"]
-            }
-            
-            const category = categoryMap[product.category] || product.category
-            const type = typeMap[product.category] || "Cleaner"
-            const features = featuresMap[product.category] || ["Quality", "Reliable"]
-            
-            // Create realistic deal data based on product
-            const originalPrice = Math.round(product.price * (1 + (Math.random() * 0.3 + 0.1))) // 10-40% higher
-            const discount = Math.round(((originalPrice - product.price) / originalPrice) * 100)
-            const sold = Math.floor(Math.random() * 200) + 50
-            const total = sold + Math.floor(Math.random() * 100) + 20
-            const rating = 4.0 + (Math.random() * 1.0) // 4.0-5.0 rating
-            const reviewCount = Math.floor(Math.random() * 300) + 50
-            const deliveryOptions = ["Today", "Tomorrow", "2-3 days"]
-            const delivery = deliveryOptions[Math.floor(Math.random() * deliveryOptions.length)]
-            const vendor = vendorNames[Math.floor(Math.random() * vendorNames.length)]
-            const stockOptions = ["In stock", "Only 5 left", "Only 3 left", "In stock"]
-            const stock = stockOptions[Math.floor(Math.random() * stockOptions.length)]
-            const coupons = [null, "SAVE100", "CLEAN15", "FLOOR20", "GREEN10"]
-            const coupon = coupons[Math.floor(Math.random() * coupons.length)]
-            const isAmazonChoice = Math.random() > 0.7
-            const isBestSeller = Math.random() > 0.8
-            
-            return {
-              id: product._id || `product-${index}`,
-              name: product.name,
-              originalPrice,
-              price: product.price,
-              discount,
-              image: product.image || "/api/placeholder/200/200",
-              sold,
-              total,
-              features,
-              type,
-              category,
-              rating: parseFloat(rating.toFixed(1)),
-              reviewCount,
-              delivery,
-              vendor,
-              isAmazonChoice,
-              isBestSeller,
-              stock,
-              coupon
-            }
-          })
-          
-          setAllCleaningDeals(transformedDeals)
-          setFilteredDeals(transformedDeals)
-          setSearchResults(transformedDeals)
-        } else {
-          throw new Error('Failed to load products')
-        }
-      } catch (err) {
-        console.error('Failed to fetch products:', err)
-        setError('Error connecting to database')
-        // Fallback to empty arrays to prevent runtime errors
-        setAllCleaningDeals([])
-        setFilteredDeals([])
-        setSearchResults([])
-      } finally {
-        setLoading(false)
       }
+      setError(null)
+      
+      const response = await fetchProducts(lastUpdate)
+      
+      if (response.success && response.products) {
+        // Transform MongoDB products to deal format
+        const transformedDeals: Deal[] = response.products.map((product: Product) => {
+          const categoryMap: { [key: string]: string } = {
+            "industrial-equipment": "Industrial Equipment",
+            "household-cleaners": "Household Cleaners", 
+            "eco-friendly": "Eco-Friendly",
+            "commercial-cleaners": "Commercial Cleaners",
+            "disinfectants": "Disinfectants",
+            "floor-care": "Floor Care"
+          }
+          
+          const typeMap: { [key: string]: string } = {
+            "industrial-equipment": "Equipment",
+            "household-cleaners": "Cleaner",
+            "eco-friendly": "Cleaner",
+            "commercial-cleaners": "Cleaner",
+            "disinfectants": "Disinfectant",
+            "floor-care": "Floor Care"
+          }
+          
+          const featuresMap: { [key: string]: string[] } = {
+            "industrial-equipment": ["Professional Grade", "Heavy Duty", "Commercial Use", "Durable"],
+            "household-cleaners": ["All-Purpose", "Safe for Families", "Effective", "Easy to Use"],
+            "eco-friendly": ["Eco-Friendly", "Biodegradable", "Natural Ingredients", "Sustainable"],
+            "commercial-cleaners": ["Commercial Grade", "High Concentration", "Cost Effective", "Bulk Packaging"],
+            "disinfectants": ["Kills 99.9% Germs", "Hospital Grade", "Quick Action", "Residual Protection"],
+            "floor-care": ["Streak-Free", "Quick Drying", "Protective Coating", "Easy Application"]
+          }
+          
+          const category = categoryMap[product.category] || product.category
+          const type = typeMap[product.category] || "Cleaner"
+          const features = featuresMap[product.category] || ["Quality", "Reliable", "Effective"]
+          
+          // Create realistic deal data based on product
+          const originalPrice = product.originalPrice || Math.round(product.price * (1 + (Math.random() * 0.3 + 0.1))) // 10-40% higher
+          const discount = Math.round(((originalPrice - product.price) / originalPrice) * 100)
+          const sold = Math.floor(Math.random() * 200) + 50
+          const total = sold + Math.floor(Math.random() * 100) + 20
+          const rating = product.rating || 4.0 + (Math.random() * 1.0) // 4.0-5.0 rating
+          const reviewCount = product.reviewCount || Math.floor(Math.random() * 300) + 50
+          const deliveryOptions = ["Today", "Tomorrow", "2-3 days"]
+          const delivery = deliveryOptions[Math.floor(Math.random() * deliveryOptions.length)]
+          const stockOptions = product.stock > 10 ? ["In stock"] : product.stock > 5 ? ["Only 5 left"] : product.stock > 0 ? ["Only 3 left"] : ["Out of stock"]
+          const stock = stockOptions[0]
+          const coupons = [null, "SAVE100", "CLEAN15", "FLOOR20", "GREEN10"]
+          const coupon = coupons[Math.floor(Math.random() * coupons.length)]
+          const isAmazonChoice = Math.random() > 0.7
+          const isBestSeller = Math.random() > 0.8
+          
+          return {
+            id: product._id,
+            name: product.name,
+            originalPrice,
+            price: product.price,
+            discount,
+            image: product.images?.[0] || "/api/placeholder/200/200",
+            sold,
+            total,
+            features,
+            type,
+            category,
+            rating: parseFloat(rating.toFixed(1)),
+            reviewCount,
+            delivery,
+            vendor: product.vendor?.businessName || "Unknown Vendor",
+            vendorId: product.vendorId,
+            vendorDetails: {
+              businessName: product.vendor?.businessName || "Unknown Vendor",
+              isVerified: product.vendor?.isVerified || false,
+              rating: product.vendor?.rating || 4.0,
+              location: product.vendor?.location || "Nairobi, Kenya",
+              joinedDate: product.vendor?.joinedDate || "2023"
+            },
+            isAmazonChoice,
+            isBestSeller,
+            stock,
+            coupon,
+            lastUpdated: product.updatedAt || product.createdAt || new Date().toISOString()
+          }
+        })
+        
+        if (isRefresh && lastUpdate) {
+          // Update existing products or add new ones
+          setAllCleaningDeals(prevDeals => {
+            const updatedDeals = [...prevDeals]
+            transformedDeals.forEach(newDeal => {
+              const existingIndex = updatedDeals.findIndex(deal => deal.id === newDeal.id)
+              if (existingIndex >= 0) {
+                updatedDeals[existingIndex] = newDeal
+              } else {
+                updatedDeals.push(newDeal)
+              }
+            })
+            return updatedDeals
+          })
+        } else {
+          setAllCleaningDeals(transformedDeals)
+        }
+        
+        setFilteredDeals(transformedDeals)
+        setSearchResults(transformedDeals)
+        setLastUpdate(response.lastUpdate)
+        
+        console.log(`✅ ${isRefresh ? 'Refreshed' : 'Loaded'} ${transformedDeals.length} vendor products`)
+      } else {
+        throw new Error('Failed to load products')
+      }
+    } catch (err) {
+      console.error('Failed to fetch products:', err)
+      setError('Error connecting to database')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
+  }
 
+  useEffect(() => {
     loadProducts()
   }, [])
+
+  // Auto-refresh products every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!loading && lastUpdate) {
+        loadProducts(true)
+      }
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [loading, lastUpdate])
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    loadProducts(true)
+  }
 
   // Search and filter handler
   const handleSearch = (query: string, filters: any) => {
@@ -1237,9 +1493,11 @@ export default function MarketplacePage() {
         <FixedNavbar cartItemsCount={cartItemsCount} />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+            <div className="flex justify-center mb-4">
+              <Loader2 className="w-12 h-12 text-emerald-600 animate-spin" />
+            </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading Marketplace</h2>
-            <p className="text-gray-600">Fetching real products from database...</p>
+            <p className="text-gray-600">Fetching vendor products from database...</p>
           </div>
         </div>
       </div>
@@ -1247,7 +1505,7 @@ export default function MarketplacePage() {
   }
 
   // Error state
-  if (error) {
+  if (error && allCleaningDeals.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
         <FixedNavbar cartItemsCount={cartItemsCount} />
@@ -1256,7 +1514,8 @@ export default function MarketplacePage() {
             <div className="text-red-500 text-4xl mb-4">⚠️</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Failed to Load Products</h2>
             <p className="text-gray-600 mb-6">{error}</p>
-            <Button onClick={() => window.location.reload()} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={() => loadProducts()} className="bg-emerald-600 hover:bg-emerald-700">
+              <RefreshCw className="w-4 h-4 mr-2" />
               Try Again
             </Button>
           </div>
@@ -1284,10 +1543,21 @@ export default function MarketplacePage() {
               Source quality products, equipment, and supplies from verified suppliers across Kenya
             </p>
             {!loading && (
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 inline-block">
-                <p className="text-white/90">
-                  Showing <strong>{allCleaningDeals.length}</strong> real products from database
-                </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                  <p className="text-white/90">
+                    Showing <strong>{allCleaningDeals.length}</strong> vendor products
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  variant="outline" 
+                  className="border-white text-white hover:bg-white/20"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                  {refreshing ? 'Refreshing...' : 'Refresh Products'}
+                </Button>
               </div>
             )}
           </div>
@@ -1382,9 +1652,21 @@ export default function MarketplacePage() {
                   <span className="font-mono font-bold text-sm">23:59:45</span>
                 </div>
                 {!isSearching && (
-                  <Button variant="ghost" className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 ml-auto">
-                    View All <ArrowRight className="w-4 h-4 ml-1" />
-                  </Button>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <Button 
+                      onClick={handleRefresh}
+                      disabled={refreshing}
+                      variant="ghost" 
+                      size="sm"
+                      className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </Button>
+                    <Button variant="ghost" className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
+                      View All <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
                 )}
               </div>
               

@@ -126,6 +126,59 @@ router.post('/vendor/login', async (req, res) => {
   }
 });
 
+// Token verification endpoint
+router.get('/verify', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'No token provided'
+      });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any;
+    
+    // Find vendor
+    const vendor = await User.findById(decoded.userId).select('-password');
+    if (!vendor || vendor.role !== 'vendor') {
+      return res.status(401).json({
+        success: false,
+        error: 'Vendor not found'
+      });
+    }
+
+    // Check if approved
+    if (vendor.status !== 'approved') {
+      return res.status(401).json({
+        success: false,
+        error: 'Vendor account pending approval'
+      });
+    }
+
+    res.json({
+      success: true,
+      vendor: {
+        id: vendor._id,
+        businessName: vendor.businessName,
+        email: vendor.email,
+        phone: vendor.phone,
+        address: vendor.address,
+        role: vendor.role,
+        status: vendor.status
+      }
+    });
+  } catch (error) {
+    console.error('Token verification error:', error);
+    res.status(401).json({
+      success: false,
+      error: 'Invalid token'
+    });
+  }
+});
+
 // Get all vendors (for admin)
 router.get('/vendors', async (req, res) => {
   try {
