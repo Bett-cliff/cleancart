@@ -26,7 +26,11 @@ import {
   MessageSquare,
   Settings,
   Truck,
-  Loader2
+  Loader2,
+  X,
+  SlidersHorizontal,
+  Image as ImageIcon,
+  FileText
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -36,11 +40,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 // Environment configuration
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-// All the vendor sections for the sub-navbar (removed duplicate Add Product)
+// All the vendor sections for the sub-navbar
 const vendorSections = [
   {
     id: "dashboard",
@@ -164,6 +183,13 @@ interface Product {
       color?: string;
     };
   }>;
+  customerReviews?: Array<{
+    _id: string;
+    customerName: string;
+    rating: number;
+    comment: string;
+    createdAt: string;
+  }>;
 }
 
 interface ProductsStats {
@@ -197,7 +223,6 @@ const useVendorId = () => {
       
       // Try to get from vendor auth context first
       try {
-        // Check if we have vendor data in localStorage from login
         const storedVendor = localStorage.getItem('vendor');
         console.log('📦 localStorage vendor:', storedVendor);
         
@@ -232,28 +257,6 @@ const useVendorId = () => {
         console.error('❌ Error getting vendor from sessionStorage:', error);
       }
 
-      // Check all localStorage keys to see what's available
-      console.log('🔍 All localStorage keys:', Object.keys(localStorage));
-      
-      // Check for any vendor-related keys
-      const vendorKeys = Object.keys(localStorage).filter(key => 
-        key.toLowerCase().includes('vendor') || 
-        key.toLowerCase().includes('user') ||
-        key.toLowerCase().includes('auth')
-      );
-      console.log('🔍 Vendor-related keys:', vendorKeys);
-      
-      // Check each vendor-related key
-      vendorKeys.forEach(key => {
-        try {
-          const value = localStorage.getItem(key);
-          console.log(`🔍 ${key}:`, value);
-        } catch (error) {
-          console.error(`❌ Error reading ${key}:`, error);
-        }
-      });
-
-      // Based on your backend logs, the actual vendor ID should be '68efb302ffa9682bb4a9bf81'
       console.log('⚠️ Using fallback vendor ID from login logs');
       return '68efb302ffa9682bb4a9bf81';
     };
@@ -287,6 +290,181 @@ const fetchWithRetry = async (url: string, options: RequestInit = {}, retries = 
   throw new Error('All retry attempts failed');
 };
 
+// Advanced Filters Component
+const AdvancedFilters = ({ 
+  isOpen, 
+  onClose, 
+  filters, 
+  onFiltersChange 
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  filters: any;
+  onFiltersChange: (filters: any) => void;
+}) => {
+  const priceRanges = [
+    { label: "Any Price", value: "all" },
+    { label: "Under KSh 1,000", value: "0-1000" },
+    { label: "KSh 1,000 - 5,000", value: "1000-5000" },
+    { label: "KSh 5,000 - 10,000", value: "5000-10000" },
+    { label: "Over KSh 10,000", value: "10000+" }
+  ];
+
+  const stockRanges = [
+    { label: "Any Stock", value: "all" },
+    { label: "Out of Stock", value: "0" },
+    { label: "Low Stock (1-10)", value: "1-10" },
+    { label: "Medium Stock (11-50)", value: "11-50" },
+    { label: "High Stock (50+)", value: "50+" }
+  ];
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Advanced Filters</DialogTitle>
+          <DialogDescription>
+            Refine your product search with advanced filters
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          {/* Price Range */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Price Range</label>
+            <Select
+              value={filters.priceRange}
+              onValueChange={(value) => onFiltersChange({ ...filters, priceRange: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select price range" />
+              </SelectTrigger>
+              <SelectContent>
+                {priceRanges.map((range) => (
+                  <SelectItem key={range.value} value={range.value}>
+                    {range.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Stock Range */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Stock Level</label>
+            <Select
+              value={filters.stockRange}
+              onValueChange={(value) => onFiltersChange({ ...filters, stockRange: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select stock level" />
+              </SelectTrigger>
+              <SelectContent>
+                {stockRanges.map((range) => (
+                  <SelectItem key={range.value} value={range.value}>
+                    {range.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Eco-Friendly Filter */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Eco-Friendly</label>
+            <Select
+              value={filters.ecoFriendly}
+              onValueChange={(value) => onFiltersChange({ ...filters, ecoFriendly: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by eco-friendly" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Products</SelectItem>
+                <SelectItem value="yes">Eco-Friendly Only</SelectItem>
+                <SelectItem value="no">Non Eco-Friendly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Featured Products */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Featured Status</label>
+            <Select
+              value={filters.featured}
+              onValueChange={(value) => onFiltersChange({ ...filters, featured: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by featured" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Products</SelectItem>
+                <SelectItem value="yes">Featured Only</SelectItem>
+                <SelectItem value="no">Non Featured</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <DialogFooter className="flex justify-between sm:justify-between">
+          <Button variant="outline" onClick={() => onFiltersChange({
+            priceRange: 'all',
+            stockRange: 'all',
+            ecoFriendly: 'all',
+            featured: 'all'
+          })}>
+            Reset Filters
+          </Button>
+          <Button onClick={onClose}>Apply Filters</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Confirmation Modal Component
+const ConfirmationModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  variant = "default"
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: "default" | "destructive";
+}) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose}>
+            {cancelText}
+          </Button>
+          <Button 
+            variant={variant === "destructive" ? "destructive" : "default"}
+            onClick={onConfirm}
+          >
+            {confirmText}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -304,6 +482,26 @@ export default function ProductsPage() {
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  
+  // New state for enhanced features
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [advancedFilters, setAdvancedFilters] = useState({
+    priceRange: 'all',
+    stockRange: 'all',
+    ecoFriendly: 'all',
+    featured: 'all'
+  })
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    action: 'archive' | 'delete' | 'activate' | null;
+    productId: string | null;
+    productName: string;
+  }>({
+    isOpen: false,
+    action: null,
+    productId: null,
+    productName: ''
+  })
 
   const vendorId = useVendorId();
   const router = useRouter();
@@ -330,14 +528,17 @@ export default function ProductsPage() {
         if (searchTerm) params.append('search', searchTerm)
         if (selectedCategory !== 'all') params.append('category', selectedCategory)
         if (selectedStatus !== 'all') params.append('status', selectedStatus)
+        
+        // Add advanced filters
+        if (advancedFilters.priceRange !== 'all') params.append('priceRange', advancedFilters.priceRange)
+        if (advancedFilters.stockRange !== 'all') params.append('stockRange', advancedFilters.stockRange)
+        if (advancedFilters.ecoFriendly !== 'all') params.append('ecoFriendly', advancedFilters.ecoFriendly)
+        if (advancedFilters.featured !== 'all') params.append('featured', advancedFilters.featured)
 
         const apiUrl = `${API_BASE}/api/products/vendor/${vendorId}?${params}`
         console.log('🌐 API URL:', apiUrl)
 
         const response = await fetchWithRetry(apiUrl)
-        
-        console.log('📡 Response status:', response.status)
-        console.log('📡 Response headers:', response.headers)
         
         if (!response.ok) {
           const errorText = await response.text()
@@ -365,7 +566,7 @@ export default function ProductsPage() {
             draftProducts,
             lowStockProducts,
             outOfStockProducts,
-            totalOrders: result.data.reduce((sum: number, p: Product) => sum + (p.reviewCount || 0), 0) // Using reviewCount as order count for now
+            totalOrders: result.data.reduce((sum: number, p: Product) => sum + (p.reviewCount || 0), 0)
           })
         } else {
           throw new Error(result.message || 'No products found in response')
@@ -384,7 +585,7 @@ export default function ProductsPage() {
     }, 500)
 
     return () => clearTimeout(timeoutId)
-  }, [searchTerm, selectedCategory, selectedStatus, vendorId, refreshKey])
+  }, [searchTerm, selectedCategory, selectedStatus, vendorId, refreshKey, advancedFilters])
 
   const refreshProducts = () => {
     setRefreshKey(prev => prev + 1);
@@ -407,131 +608,83 @@ export default function ProductsPage() {
 
   const handleViewProduct = useCallback((productId: string) => {
     console.log('👀 Viewing product:', productId);
-    // Navigate to product details page
     router.push(`/vendor/products/${productId}`);
   }, [router]);
 
   const handleEditProduct = useCallback((productId: string) => {
     console.log('✏️ Editing product:', productId);
-    // Navigate to edit product page
     router.push(`/vendor/products/edit/${productId}`);
   }, [router]);
 
-  const handleDeleteProduct = useCallback(async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) return
+  const showConfirmation = (action: 'archive' | 'delete' | 'activate', productId: string, productName: string) => {
+    setConfirmationModal({
+      isOpen: true,
+      action,
+      productId,
+      productName
+    });
+  };
+
+  const handleConfirmation = async () => {
+    const { action, productId } = confirmationModal;
+    if (!action || !productId) return;
 
     try {
-      setActionLoading(`delete-${productId}`)
-      console.log('🗑️ Deleting product:', productId)
+      setActionLoading(`${action}-${productId}`);
       
-      const response = await fetchWithRetry(`${API_BASE}/api/products/${productId}`, {
-        method: 'DELETE',
-      })
+      let url = `${API_BASE}/api/products/${productId}`;
+      let method = 'PUT';
+      let body = null;
+
+      switch (action) {
+        case 'delete':
+          method = 'DELETE';
+          break;
+        case 'archive':
+          body = { status: 'archived' };
+          break;
+        case 'activate':
+          body = { status: 'active' };
+          break;
+      }
+
+      const response = await fetchWithRetry(url, {
+        method,
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to delete product')
+        throw new Error(`Failed to ${action} product`);
       }
 
-      const result = await response.json() as ApiResponse<null>
+      const result = await response.json() as ApiResponse<Product | null>;
       
       if (result.success) {
-        console.log('✅ Product deleted successfully')
-        // Remove product from local state
-        setProducts(prev => prev.filter(p => p._id !== productId))
-        // Refresh stats
-        setStats(prev => ({
-          ...prev,
-          totalProducts: prev.totalProducts - 1
-        }))
+        console.log(`✅ Product ${action}ed successfully`);
+        
+        // Update local state based on action
+        if (action === 'delete') {
+          setProducts(prev => prev.filter(p => p._id !== productId));
+          setStats(prev => ({ ...prev, totalProducts: prev.totalProducts - 1 }));
+        } else {
+          setProducts(prev => prev.map(p => 
+            p._id === productId ? { ...p, status: action === 'archive' ? 'archived' : 'active' } : p
+          ));
+        }
+        
         refreshProducts();
       } else {
-        throw new Error(result.message || 'Failed to delete product')
+        throw new Error(result.message || `Failed to ${action} product`);
       }
     } catch (err) {
-      console.error('❌ Error deleting product:', err)
-      alert('Failed to delete product. Please try again.')
+      console.error(`❌ Error ${action}ing product:`, err);
+      alert(`Failed to ${action} product. Please try again.`);
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
+      setConfirmationModal({ isOpen: false, action: null, productId: null, productName: '' });
     }
-  }, [])
-
-  const handleArchiveProduct = useCallback(async (productId: string) => {
-    try {
-      setActionLoading(`archive-${productId}`)
-      console.log('📦 Archiving product:', productId)
-      
-      const response = await fetchWithRetry(`${API_BASE}/api/products/${productId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'archived'
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to archive product')
-      }
-
-      const result = await response.json() as ApiResponse<Product>
-      
-      if (result.success) {
-        console.log('✅ Product archived successfully')
-        // Update product status in local state
-        setProducts(prev => prev.map(p => 
-          p._id === productId ? { ...p, status: 'archived' } : p
-        ))
-        refreshProducts();
-      } else {
-        throw new Error(result.message || 'Failed to archive product')
-      }
-    } catch (err) {
-      console.error('❌ Error archiving product:', err)
-      alert('Failed to archive product. Please try again.')
-    } finally {
-      setActionLoading(null)
-    }
-  }, [])
-
-  const handleActivateProduct = useCallback(async (productId: string) => {
-    try {
-      setActionLoading(`activate-${productId}`)
-      console.log('🚀 Activating product:', productId)
-      
-      const response = await fetchWithRetry(`${API_BASE}/api/products/${productId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'active'
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to activate product')
-      }
-
-      const result = await response.json() as ApiResponse<Product>
-      
-      if (result.success) {
-        console.log('✅ Product activated successfully')
-        // Update product status in local state
-        setProducts(prev => prev.map(p => 
-          p._id === productId ? { ...p, status: 'active' } : p
-        ))
-        refreshProducts();
-      } else {
-        throw new Error(result.message || 'Failed to activate product')
-      }
-    } catch (err) {
-      console.error('❌ Error activating product:', err)
-      alert('Failed to activate product. Please try again.')
-    } finally {
-      setActionLoading(null)
-    }
-  }, [])
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -540,6 +693,41 @@ export default function ProductsPage() {
       day: 'numeric'
     })
   }
+
+  const getConfirmationConfig = () => {
+    const { action, productName } = confirmationModal;
+    
+    switch (action) {
+      case 'delete':
+        return {
+          title: 'Delete Product',
+          description: `Are you sure you want to delete "${productName}"? This action cannot be undone.`,
+          confirmText: 'Delete',
+          variant: 'destructive' as const
+        };
+      case 'archive':
+        return {
+          title: 'Archive Product',
+          description: `Are you sure you want to archive "${productName}"? Archived products won't be visible to customers.`,
+          confirmText: 'Archive',
+          variant: 'default' as const
+        };
+      case 'activate':
+        return {
+          title: 'Activate Product',
+          description: `Are you sure you want to activate "${productName}"? This will make it visible to customers.`,
+          confirmText: 'Activate',
+          variant: 'default' as const
+        };
+      default:
+        return {
+          title: 'Confirm Action',
+          description: 'Are you sure you want to proceed?',
+          confirmText: 'Confirm',
+          variant: 'default' as const
+        };
+    }
+  };
 
   if (error) {
     return (
@@ -644,8 +832,8 @@ export default function ProductsPage() {
                 <p className="text-sm font-medium text-gray-600">Drafts</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.draftProducts}</p>
               </div>
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <Package className="w-5 h-5 text-gray-600" />
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <FileText className="w-5 h-5 text-yellow-600" />
               </div>
             </div>
           </CardContent>
@@ -738,13 +926,33 @@ export default function ProductsPage() {
               </select>
             </div>
 
-            <Button variant="outline" className="flex items-center gap-2">
-              <Filter className="w-4 h-4" />
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => setShowAdvancedFilters(true)}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
               More Filters
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Advanced Filters Modal */}
+      <AdvancedFilters
+        isOpen={showAdvancedFilters}
+        onClose={() => setShowAdvancedFilters(false)}
+        filters={advancedFilters}
+        onFiltersChange={setAdvancedFilters}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
+        onConfirm={handleConfirmation}
+        {...getConfirmationConfig()}
+      />
 
       {/* Loading State */}
       {isLoading && (
@@ -756,157 +964,374 @@ export default function ProductsPage() {
 
       {/* Products Grid */}
       {!isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <Card key={product._id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <CardHeader className="p-4 pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-                      <Package className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-semibold">{product.name}</CardTitle>
-                      <CardDescription className="text-sm line-clamp-1">
-                        {product.category}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem 
-                        className="flex items-center gap-2"
-                        onClick={() => handleViewProduct(product._id)}
-                      >
-                        <Eye className="w-4 h-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="flex items-center gap-2"
-                        onClick={() => handleEditProduct(product._id)}
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit Product
-                      </DropdownMenuItem>
-                      {product.status === 'draft' && (
-                        <DropdownMenuItem 
-                          className="flex items-center gap-2 text-green-600"
-                          onClick={() => handleActivateProduct(product._id)}
+        <div className="space-y-8">
+          {/* Draft Products Section */}
+          {products.filter(p => p.status === 'draft').length > 0 && (
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-2 h-6 bg-yellow-500 rounded-full"></div>
+                <h2 className="text-xl font-semibold text-gray-900">Draft Products</h2>
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                  {products.filter(p => p.status === 'draft').length} draft{products.filter(p => p.status === 'draft').length > 1 ? 's' : ''}
+                </Badge>
+              </div>
+              <p className="text-gray-600 mb-6">Continue editing your unfinished products</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {products.filter(p => p.status === 'draft').map((product) => (
+                  <Card key={product._id} className="overflow-hidden hover:shadow-lg transition-shadow border-2 border-yellow-200">
+                    <CardHeader className="p-4 pb-2 bg-yellow-50">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center overflow-hidden">
+                            {product.images && product.images.length > 0 ? (
+                              <img 
+                                src={product.images[0]} 
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Package className="w-6 h-6 text-white" />
+                            )}
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg font-semibold">{product.name}</CardTitle>
+                            <CardDescription className="text-sm line-clamp-1">
+                              {product.category}
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              className="flex items-center gap-2"
+                              onClick={() => handleEditProduct(product._id)}
+                            >
+                              <Edit className="w-4 h-4" />
+                              Continue Editing
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="flex items-center gap-2 text-green-600"
+                              onClick={() => showConfirmation('activate', product._id, product.name)}
+                              disabled={actionLoading === `activate-${product._id}`}
+                            >
+                              {actionLoading === `activate-${product._id}` ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Package className="w-4 h-4" />
+                              )}
+                              {actionLoading === `activate-${product._id}` ? 'Activating...' : 'Publish Now'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="flex items-center gap-2 text-red-600"
+                              onClick={() => showConfirmation('delete', product._id, product.name)}
+                              disabled={actionLoading === `delete-${product._id}`}
+                            >
+                              {actionLoading === `delete-${product._id}` ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                              {actionLoading === `delete-${product._id}` ? 'Deleting...' : 'Delete Draft'}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="p-4 pt-2">
+                      {/* Draft Status Banner */}
+                      <div className="mb-3 p-2 bg-yellow-100 border border-yellow-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-yellow-600" />
+                          <span className="text-sm font-medium text-yellow-800">Draft - Not visible to customers</span>
+                        </div>
+                      </div>
+
+                      {/* Product Images Preview */}
+                      {product.images && product.images.length > 0 && (
+                        <div className="mb-3">
+                          <div className="flex gap-2 overflow-x-auto pb-2">
+                            {product.images.slice(0, 3).map((image, index) => (
+                              <div key={index} className="flex-shrink-0 w-16 h-16 rounded border overflow-hidden">
+                                <img 
+                                  src={image} 
+                                  alt={`${product.name} ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ))}
+                            {product.images.length > 3 && (
+                              <div className="flex-shrink-0 w-16 h-16 rounded border bg-gray-100 flex items-center justify-center">
+                                <span className="text-xs text-gray-600">+{product.images.length - 3}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                        {product.description}
+                      </p>
+                      
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-2xl font-bold text-gray-900">KSh {product.price.toLocaleString()}</span>
+                        <div className="flex gap-2">
+                          {getStatusBadge(product.status)}
+                          {getStockBadge(product.stock)}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center gap-1">
+                          <Package className="w-4 h-4" />
+                          <span>{product.stock} in stock</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <ShoppingCart className="w-4 h-4" />
+                          <span>{product.reviewCount || 0} orders</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-500" />
+                          <span>{product.rating || 'No ratings'}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-gray-500">Added {formatDate(product.createdAt)}</span>
+                        </div>
+                      </div>
+
+                      {product.isEcoFriendly && (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 mb-2">
+                          🌱 Eco-Friendly
+                        </Badge>
+                      )}
+
+                      <div className="flex gap-2 mt-4">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => handleEditProduct(product._id)}
+                          disabled={actionLoading === `edit-${product._id}`}
+                        >
+                          {actionLoading === `edit-${product._id}` ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                          ) : (
+                            <Edit className="w-4 h-4 mr-1" />
+                          )}
+                          {actionLoading === `edit-${product._id}` ? 'Editing...' : 'Continue Editing'}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          onClick={() => showConfirmation('activate', product._id, product.name)}
                           disabled={actionLoading === `activate-${product._id}`}
                         >
                           {actionLoading === `activate-${product._id}` ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-4 h-4 animate-spin mr-1" />
                           ) : (
-                            <Package className="w-4 h-4" />
+                            <Package className="w-4 h-4 mr-1" />
                           )}
-                          {actionLoading === `activate-${product._id}` ? 'Activating...' : 'Activate'}
-                        </DropdownMenuItem>
+                          {actionLoading === `activate-${product._id}` ? 'Publishing...' : 'Publish'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Active Products Section */}
+          {products.filter(p => p.status === 'active').length > 0 && (
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-2 h-6 bg-green-500 rounded-full"></div>
+                <h2 className="text-xl font-semibold text-gray-900">Active Products</h2>
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  {products.filter(p => p.status === 'active').length} active
+                </Badge>
+              </div>
+              <p className="text-gray-600 mb-6">Products currently visible to customers</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {products.filter(p => p.status === 'active').map((product) => (
+                  <Card key={product._id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                    <CardHeader className="p-4 pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center overflow-hidden">
+                            {product.images && product.images.length > 0 ? (
+                              <img 
+                                src={product.images[0]} 
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <ImageIcon className="w-6 h-6 text-white" />
+                            )}
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg font-semibold">{product.name}</CardTitle>
+                            <CardDescription className="text-sm line-clamp-1">
+                              {product.category}
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              className="flex items-center gap-2"
+                              onClick={() => handleViewProduct(product._id)}
+                            >
+                              <Eye className="w-4 h-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="flex items-center gap-2"
+                              onClick={() => handleEditProduct(product._id)}
+                            >
+                              <Edit className="w-4 h-4" />
+                              Edit Product
+                            </DropdownMenuItem>
+                            {/* REMOVED: View Live Button */}
+                            <DropdownMenuItem 
+                              className="flex items-center gap-2"
+                              onClick={() => showConfirmation('archive', product._id, product.name)}
+                              disabled={actionLoading === `archive-${product._id}`}
+                            >
+                              {actionLoading === `archive-${product._id}` ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Archive className="w-4 h-4" />
+                              )}
+                              {actionLoading === `archive-${product._id}` ? 'Archiving...' : 'Archive'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="flex items-center gap-2 text-red-600"
+                              onClick={() => showConfirmation('delete', product._id, product.name)}
+                              disabled={actionLoading === `delete-${product._id}`}
+                            >
+                              {actionLoading === `delete-${product._id}` ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                              {actionLoading === `delete-${product._id}` ? 'Deleting...' : 'Delete'}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="p-4 pt-2">
+                      {/* Product Images Preview */}
+                      {product.images && product.images.length > 0 && (
+                        <div className="mb-3">
+                          <div className="flex gap-2 overflow-x-auto pb-2">
+                            {product.images.slice(0, 3).map((image, index) => (
+                              <div key={index} className="flex-shrink-0 w-16 h-16 rounded border overflow-hidden">
+                                <img 
+                                  src={image} 
+                                  alt={`${product.name} ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ))}
+                            {product.images.length > 3 && (
+                              <div className="flex-shrink-0 w-16 h-16 rounded border bg-gray-100 flex items-center justify-center">
+                                <span className="text-xs text-gray-600">+{product.images.length - 3}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       )}
-                      {product.status === 'active' && (
-                        <DropdownMenuItem 
-                          className="flex items-center gap-2"
-                          onClick={() => handleArchiveProduct(product._id)}
-                          disabled={actionLoading === `archive-${product._id}`}
+                      
+                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                        {product.description}
+                      </p>
+                      
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-2xl font-bold text-gray-900">KSh {product.price.toLocaleString()}</span>
+                        <div className="flex gap-2">
+                          {getStatusBadge(product.status)}
+                          {getStockBadge(product.stock)}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center gap-1">
+                          <Package className="w-4 h-4" />
+                          <span>{product.stock} in stock</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <ShoppingCart className="w-4 h-4" />
+                          <span>{product.reviewCount || 0} orders</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-500" />
+                          <span>{product.rating || 'No ratings'}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-gray-500">Added {formatDate(product.createdAt)}</span>
+                        </div>
+                      </div>
+
+                      {product.isEcoFriendly && (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 mb-2">
+                          🌱 Eco-Friendly
+                        </Badge>
+                      )}
+
+                      {product.isFeatured && (
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 mb-2 ml-2">
+                          ⭐ Featured
+                        </Badge>
+                      )}
+
+                      <div className="flex gap-2 mt-4">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => handleEditProduct(product._id)}
+                          disabled={actionLoading === `edit-${product._id}`}
                         >
-                          {actionLoading === `archive-${product._id}` ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                          {actionLoading === `edit-${product._id}` ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-1" />
                           ) : (
-                            <Archive className="w-4 h-4" />
+                            <Edit className="w-4 h-4 mr-1" />
                           )}
-                          {actionLoading === `archive-${product._id}` ? 'Archiving...' : 'Archive'}
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem 
-                        className="flex items-center gap-2 text-red-600"
-                        onClick={() => handleDeleteProduct(product._id)}
-                        disabled={actionLoading === `delete-${product._id}`}
-                      >
-                        {actionLoading === `delete-${product._id}` ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                        {actionLoading === `delete-${product._id}` ? 'Deleting...' : 'Delete'}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="p-4 pt-2">
-                <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                  {product.description}
-                </p>
-                
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-2xl font-bold text-gray-900">KSh {product.price.toLocaleString()}</span>
-                  <div className="flex gap-2">
-                    {getStatusBadge(product.status)}
-                    {getStockBadge(product.stock)}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
-                  <div className="flex items-center gap-1">
-                    <Package className="w-4 h-4" />
-                    <span>{product.stock} in stock</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <ShoppingCart className="w-4 h-4" />
-                    <span>{product.reviewCount || 0} orders</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-500" />
-                    <span>{product.rating || 'No ratings'}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs text-gray-500">Added {formatDate(product.createdAt)}</span>
-                  </div>
-                </div>
-
-                {product.isEcoFriendly && (
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 mb-2">
-                    🌱 Eco-Friendly
-                  </Badge>
-                )}
-
-                <div className="flex gap-2 mt-4">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={() => handleEditProduct(product._id)}
-                    disabled={actionLoading === `edit-${product._id}`}
-                  >
-                    {actionLoading === `edit-${product._id}` ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                    ) : (
-                      <Edit className="w-4 h-4 mr-1" />
-                    )}
-                    {actionLoading === `edit-${product._id}` ? 'Editing...' : 'Edit'}
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                    onClick={() => handleViewProduct(product._id)}
-                    disabled={actionLoading === `view-${product._id}`}
-                  >
-                    {actionLoading === `view-${product._id}` ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                    ) : (
-                      <Eye className="w-4 h-4 mr-1" />
-                    )}
-                    {actionLoading === `view-${product._id}` ? 'Loading...' : 'View'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                          {actionLoading === `edit-${product._id}` ? 'Editing...' : 'Edit'}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          onClick={() => handleViewProduct(product._id)}
+                          disabled={actionLoading === `view-${product._id}`}
+                        >
+                          {actionLoading === `view-${product._id}` ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                          ) : (
+                            <Eye className="w-4 h-4 mr-1" />
+                          )}
+                          {actionLoading === `view-${product._id}` ? 'Loading...' : 'View Details'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

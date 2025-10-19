@@ -37,6 +37,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { saveAs } from 'file-saver'
+import toast from 'react-hot-toast'
 
 // All the vendor sections for the sub-navbar
 const vendorSections = [
@@ -143,6 +145,7 @@ const paymentStatusConfig = {
 
 interface Order {
   id: string;
+  orderId: string;
   customer: {
     name: string;
     email: string;
@@ -223,6 +226,65 @@ export default function OrdersPage() {
     return () => clearTimeout(timeoutId)
   }, [searchTerm, selectedStatus, selectedPaymentStatus])
 
+  // Export functionality
+  const handleExport = async () => {
+    try {
+      setIsLoading(true)
+      
+      const params = new URLSearchParams()
+      if (searchTerm) params.append('search', searchTerm)
+      if (selectedStatus !== 'all') params.append('status', selectedStatus)
+      if (selectedPaymentStatus !== 'all') params.append('paymentStatus', selectedPaymentStatus)
+
+      const response = await fetch(`/api/vendor/orders/export?${params}`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to export orders')
+      }
+
+      const blob = await response.blob()
+      const filename = `orders-export-${new Date().toISOString().split('T')[0]}.csv`
+      saveAs(blob, filename)
+      
+      toast.success('Orders exported successfully!')
+    } catch (err) {
+      console.error('Error exporting orders:', err)
+      toast.error('Failed to export orders')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Enhanced refresh function
+  const handleRefresh = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const params = new URLSearchParams()
+      if (searchTerm) params.append('search', searchTerm)
+      if (selectedStatus !== 'all') params.append('status', selectedStatus)
+      if (selectedPaymentStatus !== 'all') params.append('paymentStatus', selectedPaymentStatus)
+
+      const response = await fetch(`/api/vendor/orders?${params}&refresh=true`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to refresh orders')
+      }
+      
+      const result = await response.json()
+      setOrders(result.data.orders)
+      setStats(result.data.stats)
+      
+      toast.success('Orders refreshed successfully!')
+    } catch (err) {
+      console.error('Error refreshing orders:', err)
+      toast.error('Failed to refresh orders')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const config = statusConfig[status as keyof typeof statusConfig]
     const Icon = config.icon
@@ -241,23 +303,6 @@ export default function OrdersPage() {
         {config.label}
       </Badge>
     )
-  }
-
-  const handleRefresh = () => {
-    const params = new URLSearchParams()
-    if (searchTerm) params.append('search', searchTerm)
-    if (selectedStatus !== 'all') params.append('status', selectedStatus)
-    if (selectedPaymentStatus !== 'all') params.append('paymentStatus', selectedPaymentStatus)
-
-    fetch(`/api/vendor/orders?${params}`)
-      .then(response => response.json())
-      .then(result => {
-        setOrders(result.data.orders)
-        setStats(result.data.stats)
-      })
-      .catch(err => {
-        console.error('Error refreshing orders:', err)
-      })
   }
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
@@ -279,9 +324,10 @@ export default function OrdersPage() {
       }
 
       handleRefresh() // Refresh the orders list
+      toast.success('Order status updated successfully!')
     } catch (err) {
       console.error('Error updating order status:', err)
-      alert('Failed to update order status')
+      toast.error('Failed to update order status')
     }
   }
 
@@ -305,9 +351,10 @@ export default function OrdersPage() {
       }
 
       handleRefresh() // Refresh the orders list
+      toast.success('Order cancelled successfully!')
     } catch (err) {
       console.error('Error cancelling order:', err)
-      alert('Failed to cancel order')
+      toast.error('Failed to cancel order')
     }
   }
 
@@ -332,7 +379,12 @@ export default function OrdersPage() {
           <p className="text-gray-600 mt-1">Manage and track customer orders</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={handleExport}
+            disabled={isLoading || orders.length === 0}
+          >
             <Download className="w-4 h-4" />
             Export
           </Button>
@@ -529,7 +581,7 @@ export default function OrdersPage() {
                         <div>
                           <Link href={`/vendor/orders/${order.id}`}>
                             <h3 className="font-semibold text-gray-900 hover:text-green-600 cursor-pointer">
-                              {order.id}
+                              {order.orderId}
                             </h3>
                           </Link>
                           <p className="text-sm text-gray-600">{order.customer.name}</p>

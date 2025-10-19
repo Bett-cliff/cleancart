@@ -17,11 +17,14 @@ import {
   X,
   Check,
   DollarSign,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export default function AddProductPage() {
   const { toast } = useToast()
@@ -29,6 +32,7 @@ export default function AddProductPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
   const [formData, setFormData] = useState({
     // Basic Information
     name: "",
@@ -107,8 +111,6 @@ export default function AddProductPage() {
 
   // Get vendor ID from vendor auth context
   const getVendorId = () => {
-    // In a real app, you'd get this from vendor authentication context
-    // For now, let's get it from localStorage where it was stored during login
     const storedVendor = localStorage.getItem('vendor');
     if (storedVendor) {
       try {
@@ -228,91 +230,114 @@ export default function AddProductPage() {
     }
   }
 
-  // Upload images to backend
-  const uploadImages = async (files: File[]): Promise<string[]> => {
-    const uploadedUrls: string[] = []
+  // Convert images to base64 for simple storage
+  const convertImagesToBase64 = async (files: File[]): Promise<string[]> => {
+    const base64Images: string[] = []
     
     for (const file of files) {
-      const formData = new FormData()
-      formData.append('image', file)
-      
       try {
-        const response = await fetch('http://localhost:5000/api/upload', {
-          method: 'POST',
-          body: formData,
-        })
-        
-        if (response.ok) {
-          const result = await response.json()
-          uploadedUrls.push(result.url)
-        } else {
-          console.error('Failed to upload image:', file.name)
-          // Use a placeholder URL for demo
-          uploadedUrls.push('/placeholder-product.jpg')
-        }
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = error => reject(error);
+        });
+        base64Images.push(base64);
       } catch (error) {
-        console.error('Error uploading image:', error)
-        uploadedUrls.push('/placeholder-product.jpg')
+        console.error('Error converting image to base64:', error);
       }
     }
     
-    return uploadedUrls
+    return base64Images;
+  }
+
+  // Validate required fields for draft
+  const validateDraftFields = () => {
+    const vendorId = getVendorId();
+    if (!vendorId) {
+      return 'Vendor ID missing. Please log in as a vendor to create products.';
+    }
+
+    // For drafts, we can be more lenient but ensure we have at least basic structure
+    if (!formData.name?.trim() && !formData.description?.trim() && !formData.category) {
+      return 'Please provide at least a product name, description, or category to save as draft.';
+    }
+
+    return null;
   }
 
   const handleSaveDraft = async () => {
     try {
       setIsSavingDraft(true);
+      setMessage({ type: 'info', text: 'Saving product as draft...' });
+      
       console.log('💾 Saving product as draft...');
       
-      // Get vendor ID from vendor auth
-      const vendorId = getVendorId();
-      
-      if (!vendorId) {
-        toast({
-          title: "Vendor ID Missing",
-          description: "Please log in as a vendor to create products.",
-          variant: "destructive",
-        });
+      // Validate draft fields
+      const validationError = validateDraftFields();
+      if (validationError) {
+        setMessage({ type: 'error', text: validationError });
         setIsSavingDraft(false);
         return;
       }
 
+      // Get vendor ID from vendor auth
+      const vendorId = getVendorId();
+      
       console.log('👤 Using vendor ID:', vendorId);
       
-      // Prepare draft data - minimal validation for drafts
+      // Convert images to base64
+      let imageUrls: string[] = [];
+      if (formData.images.length > 0) {
+        setMessage({ type: 'info', text: 'Processing images...' });
+        imageUrls = await convertImagesToBase64(formData.images);
+      }
+
+      // Prepare draft data with ALL required fields for backend
       const draftData = {
-        name: formData.name || 'Untitled Product Draft',
-        description: formData.description || 'Product description will be added later.',
+        // Required fields with fallback values
+        name: formData.name?.trim() || 'Untitled Product Draft',
+        description: formData.description?.trim() || 'Product description will be added later.',
         category: formData.category || 'Uncategorized',
-        brand: formData.brand || '',
         price: formData.price ? parseFloat(formData.price) : 0,
-        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
         stock: formData.stock ? parseInt(formData.stock) : 0,
+        vendorId: vendorId,
+        
+        // Optional fields with proper defaults
+        brand: formData.brand || '',
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : 0,
         sku: formData.sku || `DRAFT-${Date.now()}`,
-        images: [], // Skip image upload for drafts to save time
-        vendorId: vendorId, // Use the actual vendor ID
+        images: imageUrls,
         specifications: formData.specifications.filter(spec => spec.key && spec.value),
-        weight: formData.weight ? parseFloat(formData.weight) : undefined,
-        dimensions: formData.dimensions,
-        metaTitle: formData.metaTitle,
-        metaDescription: formData.metaDescription,
-        status: 'draft', // Explicitly set to draft
+        weight: formData.weight ? parseFloat(formData.weight) : 0,
+        dimensions: {
+          length: formData.dimensions.length || "0",
+          width: formData.dimensions.width || "0", 
+          height: formData.dimensions.height || "0"
+        },
+        metaTitle: formData.metaTitle || '',
+        metaDescription: formData.metaDescription || '',
+        status: 'draft',
         isEcoFriendly: formData.isEcoFriendly,
-        isFeatured: false, // Drafts should not be featured
+        isFeatured: false,
         variants: formData.hasVariants ? formData.variants.map(variant => ({
-          name: variant.name,
+          name: variant.name || 'Default Variant',
           price: variant.price ? parseFloat(variant.price) : 0,
-          originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : undefined,
+          originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : 0,
           stock: variant.stock ? parseInt(variant.stock) : 0,
-          sku: variant.sku,
-          attributes: variant.attributes
+          sku: variant.sku || '',
+          attributes: {
+            size: variant.attributes.size || '',
+            color: variant.attributes.color || ''
+          }
         })) : []
       }
 
       console.log('📦 Saving draft data:', draftData);
+      setMessage({ type: 'info', text: 'Saving to database...' });
 
       // Send draft data to backend API
-      const response = await fetch('http://localhost:5000/api/products', {
+      const response = await fetch(`${API_BASE}/api/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -322,6 +347,7 @@ export default function AddProductPage() {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ Draft save failed:', errorText);
         throw new Error(`Failed to save draft: ${response.status} - ${errorText}`);
       }
 
@@ -329,25 +355,24 @@ export default function AddProductPage() {
 
       if (result.success) {
         console.log('✅ Draft saved successfully:', result);
-        toast({
-          title: "Draft Saved Successfully!",
-          description: "Your product has been saved as a draft. You can continue editing later.",
+        setMessage({ 
+          type: 'success', 
+          text: 'Draft saved successfully! Redirecting to products page...' 
         });
         
-        // Redirect to products list after short delay
+        // Wait a moment so user can see the success message
         setTimeout(() => {
           router.push('/vendor/products');
-        }, 1500);
+        }, 2000);
       } else {
         throw new Error(result.message || 'Failed to save draft');
       }
 
     } catch (error) {
       console.error('❌ Error saving draft:', error);
-      toast({
-        title: "Failed to Save Draft",
-        description: error instanceof Error ? error.message : "Please try again or contact support.",
-        variant: "destructive",
+      setMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Failed to save draft. Please try again.' 
       });
     } finally {
       setIsSavingDraft(false);
@@ -357,14 +382,31 @@ export default function AddProductPage() {
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
+      setMessage({ type: 'info', text: 'Publishing product...' });
 
       // Validate required fields for published products
-      if (!formData.name || !formData.description || !formData.category || !formData.price || !formData.stock) {
-        toast({
-          title: "Missing Required Fields",
-          description: "Please fill in all required fields (Name, Description, Category, Price, Stock).",
-          variant: "destructive",
-        });
+      if (!formData.name?.trim()) {
+        setMessage({ type: 'error', text: 'Product name is required.' });
+        setIsSubmitting(false);
+        return;
+      }
+      if (!formData.description?.trim()) {
+        setMessage({ type: 'error', text: 'Product description is required.' });
+        setIsSubmitting(false);
+        return;
+      }
+      if (!formData.category) {
+        setMessage({ type: 'error', text: 'Product category is required.' });
+        setIsSubmitting(false);
+        return;
+      }
+      if (!formData.price) {
+        setMessage({ type: 'error', text: 'Product price is required.' });
+        setIsSubmitting(false);
+        return;
+      }
+      if (!formData.stock) {
+        setMessage({ type: 'error', text: 'Product stock quantity is required.' });
         setIsSubmitting(false);
         return;
       }
@@ -373,56 +415,61 @@ export default function AddProductPage() {
       const vendorId = getVendorId();
       
       if (!vendorId) {
-        toast({
-          title: "Vendor ID Missing",
-          description: "Please log in as a vendor to create products.",
-          variant: "destructive",
+        setMessage({
+          type: 'error',
+          text: 'Please log in as a vendor to create products.'
         });
         setIsSubmitting(false);
         return;
       }
 
-      // Upload images if any
+      // Convert images to base64
       let imageUrls: string[] = [];
       if (formData.images.length > 0) {
-        imageUrls = await uploadImages(formData.images);
+        setMessage({ type: 'info', text: 'Processing images...' });
+        imageUrls = await convertImagesToBase64(formData.images);
       }
 
-      // Prepare product data for API
+      // Prepare product data for API - ensure all required fields have values
       const productData = {
-        name: formData.name,
-        description: formData.description,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
         category: formData.category,
-        brand: formData.brand,
         price: parseFloat(formData.price),
-        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
         stock: parseInt(formData.stock),
-        sku: formData.sku,
+        vendorId: vendorId,
+        // Optional fields with proper defaults
+        brand: formData.brand || '',
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : 0,
+        sku: formData.sku || '',
         images: imageUrls,
-        vendorId: vendorId, // Use the actual vendor ID
         specifications: formData.specifications.filter(spec => spec.key && spec.value),
-        weight: formData.weight ? parseFloat(formData.weight) : undefined,
-        dimensions: formData.dimensions,
-        metaTitle: formData.metaTitle,
-        metaDescription: formData.metaDescription,
+        weight: formData.weight ? parseFloat(formData.weight) : 0,
+        dimensions: {
+          length: formData.dimensions.length || "0",
+          width: formData.dimensions.width || "0",
+          height: formData.dimensions.height || "0"
+        },
+        metaTitle: formData.metaTitle || '',
+        metaDescription: formData.metaDescription || '',
         status: formData.status,
         isEcoFriendly: formData.isEcoFriendly,
         isFeatured: formData.isFeatured,
-        // Handle variants if enabled
         variants: formData.hasVariants ? formData.variants.map(variant => ({
-          name: variant.name,
-          price: parseFloat(variant.price),
-          originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : undefined,
-          stock: parseInt(variant.stock),
-          sku: variant.sku,
+          name: variant.name || 'Default Variant',
+          price: variant.price ? parseFloat(variant.price) : 0,
+          originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : 0,
+          stock: variant.stock ? parseInt(variant.stock) : 0,
+          sku: variant.sku || '',
           attributes: variant.attributes
         })) : []
       }
 
       console.log('📦 Submitting product data:', productData);
+      setMessage({ type: 'info', text: 'Publishing product...' });
 
       // Send product data to backend API
-      const response = await fetch('http://localhost:5000/api/products', {
+      const response = await fetch(`${API_BASE}/api/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -431,15 +478,16 @@ export default function AddProductPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to create product: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`Failed to create product: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
 
       if (result.success) {
-        toast({
-          title: "Product Created Successfully!",
-          description: "Your product has been added to your store and is now live.",
+        setMessage({
+          type: 'success',
+          text: 'Product published successfully! Redirecting...'
         });
         
         // Redirect to products list after successful creation
@@ -452,10 +500,9 @@ export default function AddProductPage() {
 
     } catch (error) {
       console.error('❌ Error creating product:', error);
-      toast({
-        title: "Failed to Create Product",
-        description: error instanceof Error ? error.message : "Please try again or contact support.",
-        variant: "destructive",
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to create product. Please try again.'
       });
     } finally {
       setIsSubmitting(false);
@@ -986,6 +1033,34 @@ export default function AddProductPage() {
             </div>
           </div>
 
+          {/* Message Display */}
+          {message && (
+            <div className={`rounded-lg p-4 mb-6 ${
+              message.type === 'success' 
+                ? 'bg-green-50 border border-green-200 text-green-800' 
+                : message.type === 'error'
+                ? 'bg-red-50 border border-red-200 text-red-800'
+                : 'bg-blue-50 border border-blue-200 text-blue-800'
+            }`}>
+              <div className="flex items-center gap-3">
+                {message.type === 'success' ? (
+                  <Check className="w-5 h-5 text-green-600" />
+                ) : message.type === 'error' ? (
+                  <X className="w-5 h-5 text-red-600" />
+                ) : (
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                )}
+                <span className="font-medium">{message.text}</span>
+                <button
+                  onClick={() => setMessage(null)}
+                  className="ml-auto hover:opacity-70 transition-opacity"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Progress Steps */}
           <div className="mb-8">
             <div className="flex items-center justify-between">
@@ -1040,36 +1115,36 @@ export default function AddProductPage() {
                 >
                   Previous
                 </Button>
+                
                 <div className="flex gap-3">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={handleSaveDraft}
                     disabled={isSubmitting || isSavingDraft}
+                    className="flex items-center gap-2"
                   >
                     {isSavingDraft ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        Saving Draft...
-                      </>
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <>
-                        <Save className="w-4 h-4 mr-2" />
-                        Save Draft
-                      </>
+                      <Save className="w-4 h-4" />
                     )}
+                    Save Draft
                   </Button>
-                  <Button 
+                  
+                  <Button
                     onClick={handleNextStep}
                     disabled={isSubmitting || isSavingDraft}
+                    className="flex items-center gap-2"
                   >
                     {isSubmitting ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        {currentStep === steps.length ? "Creating..." : "Processing..."}
-                      </>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : currentStep === steps.length ? (
+                      <Check className="w-4 h-4" />
                     ) : (
-                      currentStep === steps.length ? "Create Product" : "Next Step"
+                      <RefreshCw className="w-4 h-4" />
                     )}
+                    {currentStep === steps.length ? 'Publish Product' : 'Next Step'}
                   </Button>
                 </div>
               </div>
@@ -1077,9 +1152,6 @@ export default function AddProductPage() {
           </Card>
         </div>
       </div>
-
-      {/* Floating Help Desk Widget */}
-      <HelpDesk />
     </div>
   )
 }

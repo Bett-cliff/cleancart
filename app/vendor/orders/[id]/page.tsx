@@ -18,63 +18,49 @@ import {
   Package
 } from "lucide-react"
 import Link from "next/link"
+import { useState, useEffect } from "react"
+import toast from 'react-hot-toast'
 
-// Mock order details - in real app, fetch by ID
-const orderDetails = {
-  id: "ORD-0012",
+interface OrderItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  total: number;
+  image: string;
+}
+
+interface OrderDetails {
+  id: string;
+  orderId: string;
   customer: {
-    name: "Sarah Johnson",
-    email: "sarah.j@email.com",
-    phone: "+254 712 345 678",
+    name: string;
+    email: string;
+    phone: string;
     shippingAddress: {
-      street: "123 Main Street",
-      city: "Nairobi",
-      state: "Nairobi County",
-      zipCode: "00100",
-      country: "Kenya"
-    }
-  },
-  date: "2024-01-20 14:30",
-  status: "pending",
-  paymentStatus: "paid",
-  paymentMethod: "M-Pesa",
-  subtotal: 4000,
-  shipping: 250,
-  tax: 0,
-  total: 4250,
-  items: [
-    {
-      id: 1,
-      name: "Organic Lavender Soap",
-      price: 1200,
-      quantity: 2,
-      total: 2400,
-      image: "/api/placeholder/60/60"
-    },
-    {
-      id: 2,
-      name: "Bamboo Toothbrush",
-      price: 800,
-      quantity: 1,
-      total: 800,
-      image: "/api/placeholder/60/60"
-    },
-    {
-      id: 3,
-      name: "Natural Deodorant",
-      price: 800,
-      quantity: 1,
-      total: 800,
-      image: "/api/placeholder/60/60"
-    }
-  ],
-  shipping: {
-    method: "Standard Delivery",
-    cost: 250,
-    estimatedDelivery: "2024-01-25",
-    trackingNumber: null
-  },
-  notes: "Please deliver before 5 PM"
+      street: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+    };
+  };
+  date: string;
+  status: string;
+  paymentStatus: string;
+  paymentMethod: string;
+  subtotal: number;
+  shipping: number;
+  tax: number;
+  total: number;
+  items: OrderItem[];
+  shippingInfo: {
+    method: string;
+    cost: number;
+    estimatedDelivery: string;
+    trackingNumber: string | null;
+  };
+  notes: string;
 }
 
 const statusConfig = {
@@ -88,7 +74,97 @@ const statusConfig = {
 export default function OrderDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const order = orderDetails
+  const [order, setOrder] = useState<OrderDetails | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
+
+  useEffect(() => {
+    const fetchOrderDetails = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`/api/vendor/orders/${params.id}`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch order details')
+        }
+        
+        const result = await response.json()
+        setOrder(result.data)
+      } catch (error) {
+        console.error('Error fetching order details:', error)
+        toast.error('Failed to load order details')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (params.id) {
+      fetchOrderDetails()
+    }
+  }, [params.id])
+
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!order) return
+    
+    try {
+      setUpdating(true)
+      const response = await fetch('/api/vendor/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'updateStatus',
+          orderId: order.id,
+          updates: { status: newStatus }
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update order status')
+      }
+
+      setOrder(prev => prev ? { ...prev, status: newStatus } : null)
+      toast.success(`Order marked as ${newStatus}`)
+    } catch (err) {
+      console.error('Error updating order status:', err)
+      toast.error('Failed to update order status')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handlePrint = () => {
+    window.print()
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading order details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!order) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Order Not Found</h2>
+          <p className="text-gray-600 mb-4">The order you're looking for doesn't exist.</p>
+          <Link href="/vendor/orders">
+            <Button>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Orders
+            </Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -102,19 +178,28 @@ export default function OrderDetailsPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Order {order.id}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Order {order.orderId}</h1>
             <p className="text-gray-600 mt-1">Placed on {order.date}</p>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2" onClick={handlePrint}>
             <Printer className="w-4 h-4" />
             Print
           </Button>
-          <Button className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
+          <Button 
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+            onClick={() => {
+              const newStatus = order.status === 'pending' ? 'processing' : 
+                               order.status === 'processing' ? 'shipped' : 
+                               order.status === 'shipped' ? 'delivered' : 'processing'
+              handleUpdateStatus(newStatus)
+            }}
+            disabled={updating || order.status === 'delivered' || order.status === 'cancelled'}
+          >
             <Truck className="w-4 h-4" />
-            Update Status
+            {updating ? 'Updating...' : 'Update Status'}
           </Button>
         </div>
       </div>
@@ -167,7 +252,7 @@ export default function OrderDetailsPage() {
                   <div>
                     <p className="font-medium text-gray-900">Order Confirmed</p>
                     <p className="text-sm text-gray-500">
-                      {order.status !== 'pending' ? 'Confirmed on 2024-01-20' : 'Pending confirmation'}
+                      {order.status !== 'pending' ? 'Confirmed' : 'Pending confirmation'}
                     </p>
                   </div>
                 </div>
@@ -185,7 +270,7 @@ export default function OrderDetailsPage() {
                   <div>
                     <p className="font-medium text-gray-900">Shipped</p>
                     <p className="text-sm text-gray-500">
-                      {order.status === 'shipped' ? `Shipped on ${order.shipping.estimatedDelivery}` :
+                      {order.status === 'shipped' ? `Shipped - Est. ${order.shippingInfo.estimatedDelivery}` :
                        order.status === 'delivered' ? 'Delivered successfully' :
                        'Preparing for shipment'}
                     </p>
@@ -235,7 +320,7 @@ export default function OrderDetailsPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="text-gray-900">KSh {order.shipping.cost.toLocaleString()}</span>
+                  <span className="text-gray-900">KSh {order.shipping.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Tax</span>
@@ -318,14 +403,19 @@ export default function OrderDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <p className="font-medium text-gray-900">{order.shipping.method}</p>
-                <p className="text-sm text-gray-600">Cost: KSh {order.shipping.cost.toLocaleString()}</p>
+                <p className="font-medium text-gray-900">{order.shippingInfo.method}</p>
+                <p className="text-sm text-gray-600">Cost: KSh {order.shippingInfo.cost.toLocaleString()}</p>
                 <p className="text-sm text-gray-600">
-                  Estimated delivery: {order.shipping.estimatedDelivery}
+                  Estimated delivery: {order.shippingInfo.estimatedDelivery}
                 </p>
+                {order.shippingInfo.trackingNumber && (
+                  <p className="text-sm text-blue-600">
+                    Tracking: {order.shippingInfo.trackingNumber}
+                  </p>
+                )}
               </div>
               
-              {!order.shipping.trackingNumber && (
+              {!order.shippingInfo.trackingNumber && order.status === 'shipped' && (
                 <Button variant="outline" className="w-full mt-4">
                   <Truck className="w-4 h-4 mr-2" />
                   Add Tracking
@@ -350,6 +440,42 @@ export default function OrderDetailsPage() {
                   {order.paymentStatus}
                 </Badge>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => handleUpdateStatus('processing')}
+                disabled={order.status !== 'pending' || updating}
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Mark as Processing
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => handleUpdateStatus('shipped')}
+                disabled={order.status !== 'processing' || updating}
+              >
+                <Truck className="w-4 h-4 mr-2" />
+                Mark as Shipped
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => handleUpdateStatus('delivered')}
+                disabled={order.status !== 'shipped' || updating}
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Mark as Delivered
+              </Button>
             </CardContent>
           </Card>
         </div>

@@ -1,3 +1,4 @@
+// app/vendor/products/[id]/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -12,12 +13,10 @@ import {
   Eye,
   ShoppingCart,
   Star,
-  Truck,
-  Calendar,
-  Tag,
-  DollarSign,
-  Warehouse,
-  Loader2
+  Image as ImageIcon,
+  Loader2,
+  User,
+  Calendar
 } from "lucide-react"
 import Link from "next/link"
 
@@ -51,41 +50,45 @@ interface Product {
       color?: string;
     };
   }>;
+  customerReviews?: Array<{
+    _id: string;
+    customerName: string;
+    rating: number;
+    comment: string;
+    createdAt: string;
+  }>;
 }
 
-export default function ProductDetailPage() {
+export default function ProductDetailsPage() {
   const params = useParams()
   const router = useRouter()
+  const productId = params.id as string
+
   const [product, setProduct] = useState<Product | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedImage, setSelectedImage] = useState(0)
 
-  const productId = params.id as string
-
+  // Fetch product details
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         setIsLoading(true)
-        setError(null)
-        
-        console.log('🔄 Fetching product details for:', productId)
-        
         const response = await fetch(`${API_BASE}/api/products/${productId}`)
         
         if (!response.ok) {
-          throw new Error(`Failed to fetch product: ${response.status}`)
+          throw new Error('Failed to fetch product')
         }
-        
+
         const result = await response.json()
         
-        if (result.success && result.data) {
-          console.log('✅ Product details loaded:', result.data)
+        if (result.success) {
           setProduct(result.data)
         } else {
-          throw new Error(result.message || 'Product not found')
+          throw new Error(result.message || 'Failed to fetch product')
         }
       } catch (err) {
-        console.error('❌ Error fetching product:', err)
+        console.error('Error fetching product:', err)
         setError(err instanceof Error ? err.message : 'An error occurred')
       } finally {
         setIsLoading(false)
@@ -97,6 +100,10 @@ export default function ProductDetailPage() {
     }
   }, [productId])
 
+  const handleViewLive = () => {
+    window.open(`/product/${productId}`, '_blank')
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -107,26 +114,11 @@ export default function ProductDetailPage() {
     })
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      active: { label: "In Stock", variant: "default" as const },
-      low_stock: { label: "Low Stock", variant: "secondary" as const },
-      out_of_stock: { label: "Out of Stock", variant: "destructive" as const },
-      archived: { label: "Archived", variant: "outline" as const },
-      draft: { label: "Draft", variant: "outline" as const }
-    }
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active
-    return <Badge variant={config.variant}>{config.label}</Badge>
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto" />
-          <p className="mt-4 text-gray-600">Loading product details...</p>
-        </div>
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+        <span className="ml-2">Loading product details...</span>
       </div>
     )
   }
@@ -135,12 +127,14 @@ export default function ProductDetailPage() {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-2">Product Not Found</h2>
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => router.back()} className="bg-green-600 hover:bg-green-700">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back
-          </Button>
+          <Link href="/vendor/products">
+            <Button variant="outline">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Products
+            </Button>
+          </Link>
         </div>
       </div>
     )
@@ -152,9 +146,12 @@ export default function ProductDetailPage() {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Product Not Found</h2>
           <p className="text-gray-600 mb-4">The product you're looking for doesn't exist.</p>
-          <Button onClick={() => router.push('/vendor/products')} className="bg-green-600 hover:bg-green-700">
-            Back to Products
-          </Button>
+          <Link href="/vendor/products">
+            <Button variant="outline">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Products
+            </Button>
+          </Link>
         </div>
       </div>
     )
@@ -165,132 +162,127 @@ export default function ProductDetailPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => router.back()}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
+          <Link href="/vendor/products">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          </Link>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
-            <p className="text-gray-600 mt-1">Product details and information</p>
+            <p className="text-gray-600">Complete product details and analytics</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/vendor/products/edit/${product._id}`}>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Edit className="w-4 h-4" />
+          <Button 
+            variant="outline"
+            onClick={handleViewLive}
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            View Live
+          </Button>
+          <Link href={`/vendor/products/edit/${productId}`}>
+            <Button className="bg-green-600 hover:bg-green-700">
+              <Edit className="w-4 h-4 mr-2" />
               Edit Product
             </Button>
           </Link>
-          <Button className="bg-green-600 hover:bg-green-700 flex items-center gap-2">
-            <Eye className="w-4 h-4" />
-            View Live
-          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Product Info */}
+        {/* Left Column - Product Images */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Basic Information */}
+          {/* Main Image Gallery */}
           <Card>
             <CardHeader>
-              <CardTitle>Product Information</CardTitle>
-              <CardDescription>Basic details about your product</CardDescription>
+              <CardTitle>Product Images</CardTitle>
+              <CardDescription>
+                All uploaded product images
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Product Name</label>
-                  <p className="text-lg font-semibold text-gray-900">{product.name}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Category</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Tag className="w-4 h-4 text-gray-400" />
-                    <p className="text-gray-900">{product.category}</p>
+            <CardContent>
+              {product.images && product.images.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Main Image */}
+                  <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                    <img
+                      src={product.images[selectedImage]}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Price</label>
-                  <p className="text-2xl font-bold text-green-600">KSh {product.price.toLocaleString()}</p>
-                  {product.originalPrice && (
-                    <p className="text-sm text-gray-500 line-through">
-                      KSh {product.originalPrice.toLocaleString()}
-                    </p>
+
+                  {/* Thumbnail Gallery */}
+                  {product.images.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {product.images.map((image, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedImage(index)}
+                          className={`flex-shrink-0 w-20 h-20 rounded border overflow-hidden ${
+                            selectedImage === index ? 'ring-2 ring-green-500' : ''
+                          }`}
+                        >
+                          <img
+                            src={image}
+                            alt={`${product.name} ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Stock Status</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Package className="w-4 h-4 text-gray-400" />
-                    <p className="text-gray-900">{product.stock} units available</p>
-                    {getStatusBadge(product.status)}
-                  </div>
+              ) : (
+                <div className="text-center py-12">
+                  <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No images uploaded for this product</p>
                 </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-600">Description</label>
-                <p className="text-gray-700 mt-1 whitespace-pre-wrap">{product.description}</p>
-              </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Specifications */}
-          {product.specifications && product.specifications.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Specifications</CardTitle>
-                <CardDescription>Product specifications and features</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {product.specifications.map((spec, index) => (
-                    <div key={index} className="flex justify-between border-b pb-2">
-                      <span className="text-sm font-medium text-gray-600">{spec.key}</span>
-                      <span className="text-sm text-gray-900">{spec.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Product Description */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Description</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700 whitespace-pre-wrap">{product.description}</p>
+            </CardContent>
+          </Card>
 
-          {/* Variants */}
-          {product.variants && product.variants.length > 0 && (
+          {/* Customer Reviews */}
+          {product.customerReviews && product.customerReviews.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Product Variants</CardTitle>
-                <CardDescription>Different versions of this product</CardDescription>
+                <CardTitle>Customer Reviews</CardTitle>
+                <CardDescription>
+                  Feedback from customers who purchased this product
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {product.variants.map((variant, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{variant.name}</h4>
-                          <p className="text-sm text-gray-600">SKU: {variant.sku}</p>
-                          {variant.attributes && (
-                            <div className="flex gap-2 mt-2">
-                              {variant.attributes.size && (
-                                <Badge variant="outline">Size: {variant.attributes.size}</Badge>
-                              )}
-                              {variant.attributes.color && (
-                                <Badge variant="outline">Color: {variant.attributes.color}</Badge>
-                              )}
-                            </div>
-                          )}
+                  {product.customerReviews.map((review) => (
+                    <div key={review._id} className="border-b pb-4 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i < review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-green-600">KSh {variant.price.toLocaleString()}</p>
-                          <p className="text-sm text-gray-600">{variant.stock} in stock</p>
-                        </div>
+                        <span className="text-sm font-medium">{review.customerName}</span>
+                      </div>
+                      <p className="text-gray-700 mb-2">{review.comment}</p>
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <Calendar className="w-3 h-3" />
+                        {formatDate(review.createdAt)}
                       </div>
                     </div>
                   ))}
@@ -300,88 +292,130 @@ export default function ProductDetailPage() {
           )}
         </div>
 
-        {/* Sidebar */}
+        {/* Right Column - Product Info */}
         <div className="space-y-6">
-          {/* Status & Actions */}
+          {/* Product Status & Actions */}
           <Card>
             <CardHeader>
               <CardTitle>Product Status</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-600">Status</span>
-                {getStatusBadge(product.status)}
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-600">Visibility</span>
-                <Badge variant={product.isFeatured ? "default" : "outline"}>
-                  {product.isFeatured ? "Featured" : "Standard"}
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={product.status === 'active' ? 'default' : 'secondary'}>
+                  {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
                 </Badge>
-              </div>
-              {product.isEcoFriendly && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">Eco-Friendly</span>
+                {product.isEcoFriendly && (
                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                     🌱 Eco-Friendly
                   </Badge>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+                {product.isFeatured && (
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                    ⭐ Featured
+                  </Badge>
+                )}
+                <Badge variant={product.stock > 10 ? 'default' : product.stock === 0 ? 'destructive' : 'secondary'}>
+                  {product.stock} in stock
+                </Badge>
+              </div>
 
-          {/* Statistics */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Statistics</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Total Orders</span>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-600">Category</p>
+                  <p className="font-medium">{product.category}</p>
                 </div>
-                <span className="font-semibold text-gray-900">{product.reviewCount || 0}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Star className="w-4 h-4 text-yellow-500" />
-                  <span className="text-sm text-gray-600">Rating</span>
+                <div>
+                  <p className="text-gray-600">Price</p>
+                  <p className="font-medium text-lg">KSh {product.price.toLocaleString()}</p>
                 </div>
-                <span className="font-semibold text-gray-900">
-                  {product.rating || 'No ratings'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Revenue</span>
-                </div>
-                <span className="font-semibold text-gray-900">
-                  KSh {((product.reviewCount || 0) * product.price).toLocaleString()}
-                </span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Timeline */}
+          {/* Sales & Analytics */}
           <Card>
             <CardHeader>
-              <CardTitle>Timeline</CardTitle>
+              <CardTitle>Sales Analytics</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Created</span>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <ShoppingCart className="w-6 h-6 text-blue-600 mx-auto mb-1" />
+                  <p className="text-2xl font-bold text-blue-600">{product.reviewCount || 0}</p>
+                  <p className="text-gray-600">Total Orders</p>
                 </div>
-                <span className="text-sm text-gray-900">{formatDate(product.createdAt)}</span>
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <Star className="w-6 h-6 text-green-600 mx-auto mb-1" />
+                  <p className="text-2xl font-bold text-green-600">{product.rating || '0'}</p>
+                  <p className="text-gray-600">Average Rating</p>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Last Updated</span>
+            </CardContent>
+          </Card>
+
+          {/* Product Specifications */}
+          {product.specifications && product.specifications.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Specifications</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {product.specifications.map((spec, index) => (
+                    <div key={index} className="flex justify-between border-b pb-2">
+                      <span className="text-gray-600">{spec.key}:</span>
+                      <span className="font-medium">{spec.value}</span>
+                    </div>
+                  ))}
                 </div>
-                <span className="text-sm text-gray-900">{formatDate(product.updatedAt)}</span>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Product Variants */}
+          {product.variants && product.variants.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Product Variants</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {product.variants.map((variant, index) => (
+                    <div key={index} className="border rounded-lg p-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-medium">{variant.name}</span>
+                        <Badge variant={variant.stock > 0 ? 'default' : 'destructive'}>
+                          {variant.stock} in stock
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>KSh {variant.price.toLocaleString()}</span>
+                        <span>{variant.sku}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Product Metadata */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Product Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Created:</span>
+                <span>{formatDate(product.createdAt)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Last Updated:</span>
+                <span>{formatDate(product.updatedAt)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Product ID:</span>
+                <span className="font-mono text-xs">{product._id}</span>
               </div>
             </CardContent>
           </Card>
