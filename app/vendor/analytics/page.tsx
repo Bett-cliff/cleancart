@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { 
@@ -29,57 +29,46 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-// Mock analytics data
-const analyticsData = {
+// Empty analytics data structure
+const emptyAnalyticsData = {
   overview: {
     revenue: {
-      current: 245230,
-      previous: 218450,
-      change: 12.3
+      current: 0,
+      previous: 0,
+      change: 0
     },
     orders: {
-      current: 1245,
-      previous: 1120,
-      change: 11.2
+      current: 0,
+      previous: 0,
+      change: 0
     },
     customers: {
-      current: 892,
-      previous: 765,
-      change: 16.6
+      current: 0,
+      previous: 0,
+      change: 0
     },
     conversion: {
-      current: 3.2,
-      previous: 2.8,
-      change: 14.3
+      current: 0,
+      previous: 0,
+      change: 0
     }
   },
   revenueData: [
-    { month: "Jan", revenue: 189000, orders: 234 },
-    { month: "Feb", revenue: 215000, orders: 298 },
-    { month: "Mar", revenue: 198000, orders: 265 },
-    { month: "Apr", revenue: 232000, orders: 312 },
-    { month: "May", revenue: 245230, orders: 345 },
+    { month: "Jan", revenue: 0, orders: 0 },
+    { month: "Feb", revenue: 0, orders: 0 },
+    { month: "Mar", revenue: 0, orders: 0 },
+    { month: "Apr", revenue: 0, orders: 0 },
+    { month: "May", revenue: 0, orders: 0 },
     { month: "Jun", revenue: 0, orders: 0 }
   ],
-  topProducts: [
-    { name: "Organic Lavender Soap", revenue: 45200, orders: 156, growth: 12.5 },
-    { name: "Bamboo Toothbrush Set", revenue: 38700, orders: 142, growth: 8.3 },
-    { name: "Natural Deodorant", revenue: 29800, orders: 112, growth: 15.7 },
-    { name: "Reusable Coffee Cup", revenue: 26500, orders: 98, growth: 22.1 },
-    { name: "Eco Cleaning Kit", revenue: 18700, orders: 76, growth: 5.4 }
-  ],
+  topProducts: [],
   customerMetrics: {
-    newCustomers: 45,
-    returningCustomers: 68,
-    retentionRate: 72.4,
-    averageLifetime: 18.6
+    newCustomers: 0,
+    returningCustomers: 0,
+    retentionRate: 0,
+    averageLifetime: 0
   },
-  salesByCategory: [
-    { category: "Personal Care", revenue: 125400, percentage: 51.2 },
-    { category: "Kitchen", revenue: 68700, percentage: 28.0 },
-    { category: "Home", revenue: 32400, percentage: 13.2 },
-    { category: "Fashion", revenue: 18730, percentage: 7.6 }
-  ]
+  salesByCategory: []
 }
 
 // All the vendor sections for the sub-navbar
@@ -173,6 +162,8 @@ const vendorSections = [
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState("monthly")
   const [activeTab, setActiveTab] = useState("overview")
+  const [analyticsData, setAnalyticsData] = useState(emptyAnalyticsData)
+  const [isLoading, setIsLoading] = useState(true)
 
   const timeRanges = [
     { value: "weekly", label: "Weekly" },
@@ -198,6 +189,94 @@ export default function AnalyticsPage() {
 
   const getChangeIcon = (change: number) => {
     return change >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+  }
+
+  // Fetch analytics data
+  useEffect(() => {
+    const fetchAnalyticsData = async () => {
+      try {
+        setIsLoading(true)
+        
+        // Get vendor token from localStorage
+        const token = localStorage.getItem('vendor_token')
+        if (!token) {
+          console.log('No vendor token found')
+          setAnalyticsData(emptyAnalyticsData)
+          return
+        }
+
+        // Fetch dashboard data which contains analytics
+        const response = await fetch('/api/vendor/dashboard', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.data) {
+            // Transform dashboard data to analytics format
+            const dashboardData = data.data
+            setAnalyticsData({
+              overview: {
+                revenue: {
+                  current: dashboardData.stats?.totalRevenue || 0,
+                  previous: 0, // Would need historical data
+                  change: 0
+                },
+                orders: {
+                  current: dashboardData.stats?.totalOrders || 0,
+                  previous: 0,
+                  change: 0
+                },
+                customers: {
+                  current: dashboardData.stats?.newCustomers || 0,
+                  previous: 0,
+                  change: 0
+                },
+                conversion: {
+                  current: dashboardData.performanceMetrics?.conversionRate || 0,
+                  previous: 0,
+                  change: 0
+                }
+              },
+              revenueData: dashboardData.salesData || emptyAnalyticsData.revenueData,
+              topProducts: dashboardData.topProducts || [],
+              customerMetrics: {
+                newCustomers: dashboardData.stats?.newCustomers || 0,
+                returningCustomers: 0, // Would need historical data
+                retentionRate: 0,
+                averageLifetime: 0
+              },
+              salesByCategory: [] // Would need category breakdown
+            })
+          }
+        } else {
+          console.log('Failed to fetch analytics data')
+          setAnalyticsData(emptyAnalyticsData)
+        }
+      } catch (error) {
+        console.error('Error fetching analytics data:', error)
+        setAnalyticsData(emptyAnalyticsData)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchAnalyticsData()
+  }, [timeRange])
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading analytics data...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

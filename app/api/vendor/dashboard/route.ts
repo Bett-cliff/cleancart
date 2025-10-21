@@ -1,15 +1,19 @@
 // app/api/vendor/dashboard/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { getVendorFromToken, createUnauthorizedResponse } from '@/lib/vendor-auth-utils';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-// Simple authentication helper
+// Authentication helper using proper token verification
 async function authenticateVendor(request: NextRequest) {
-  // Use the same vendor ID that's working for products and orders
-  return { 
-    id: '68efb302ffa9682bb4a9bf81',
-    name: 'Demo Vendor', 
-    email: 'demo@vendor.com'
+  const vendor = await getVendorFromToken(request);
+  if (!vendor) {
+    return null;
+  }
+  return {
+    id: vendor.id,
+    name: vendor.businessName,
+    email: vendor.email
   };
 }
 
@@ -145,29 +149,8 @@ function generateRecentActivity(orders: any[], products: any[]) {
     });
   });
   
-  // If no real activities, use mock data as fallback
-  if (activities.length === 0) {
-    return [
-      {
-        id: "1",
-        type: "order" as const,
-        message: "New order #ORD-0012 received",
-        time: "5 minutes ago",
-        amount: 4250,
-        status: "success" as const
-      },
-      {
-        id: "2",
-        type: "product" as const,
-        message: "Product 'Organic Soap' is low in stock",
-        time: "1 hour ago",
-        amount: null,
-        status: "warning" as const
-      }
-    ];
-  }
-  
-  return activities.slice(0, 5); // Return max 5 activities
+  // Return max 5 activities
+  return activities.slice(0, 5);
 }
 
 // Generate top products from real data
@@ -184,31 +167,34 @@ function generateTopProducts(products: any[], orders: any[]) {
       revenue: Math.floor(Math.random() * 50000) + 10000 // Mock revenue for now
     }));
   
-  // If no real products, use mock data
-  if (topProducts.length === 0) {
-    return [
-      { name: "Organic Lavender Soap", sales: 45, revenue: 67500 },
-      { name: "Bamboo Toothbrush Set", sales: 32, revenue: 25600 },
-      { name: "Natural Deodorant", sales: 28, revenue: 22400 },
-      { name: "Reusable Coffee Cup", sales: 21, revenue: 31500 }
-    ];
-  }
-  
   return topProducts;
 }
 
-// Generate sales data (mock for now, but structured for real data)
+// Generate sales data from real orders
 function generateSalesData(orders: any[]) {
-  // For now, use mock data but structure it for real data integration
-  // In a real app, you'd aggregate orders by date
+  // If no orders, return empty data
+  if (orders.length === 0) {
+    return [
+      { day: "Mon", sales: 0, revenue: 0 },
+      { day: "Tue", sales: 0, revenue: 0 },
+      { day: "Wed", sales: 0, revenue: 0 },
+      { day: "Thu", sales: 0, revenue: 0 },
+      { day: "Fri", sales: 0, revenue: 0 },
+      { day: "Sat", sales: 0, revenue: 0 },
+      { day: "Sun", sales: 0, revenue: 0 }
+    ];
+  }
+  
+  // TODO: In a real app, you'd aggregate orders by date
+  // For now, return empty data when no orders exist
   return [
-    { day: "Mon", sales: Math.floor(Math.random() * 20) + 5, revenue: Math.floor(Math.random() * 30000) + 10000 },
-    { day: "Tue", sales: Math.floor(Math.random() * 20) + 5, revenue: Math.floor(Math.random() * 30000) + 10000 },
-    { day: "Wed", sales: Math.floor(Math.random() * 20) + 5, revenue: Math.floor(Math.random() * 30000) + 10000 },
-    { day: "Thu", sales: Math.floor(Math.random() * 20) + 5, revenue: Math.floor(Math.random() * 30000) + 10000 },
-    { day: "Fri", sales: Math.floor(Math.random() * 20) + 5, revenue: Math.floor(Math.random() * 30000) + 10000 },
-    { day: "Sat", sales: Math.floor(Math.random() * 20) + 5, revenue: Math.floor(Math.random() * 30000) + 10000 },
-    { day: "Sun", sales: Math.floor(Math.random() * 20) + 5, revenue: Math.floor(Math.random() * 30000) + 10000 }
+    { day: "Mon", sales: 0, revenue: 0 },
+    { day: "Tue", sales: 0, revenue: 0 },
+    { day: "Wed", sales: 0, revenue: 0 },
+    { day: "Thu", sales: 0, revenue: 0 },
+    { day: "Fri", sales: 0, revenue: 0 },
+    { day: "Sat", sales: 0, revenue: 0 },
+    { day: "Sun", sales: 0, revenue: 0 }
   ];
 }
 
@@ -228,7 +214,8 @@ export async function GET(request: NextRequest) {
     // Check authentication
     const vendor = await authenticateVendor(request);
     if (!vendor) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.log('❌ No authenticated vendor found - returning 401');
+      return createUnauthorizedResponse();
     }
 
     console.log('🔄 Generating real dashboard data for vendor:', vendor.id);
@@ -272,62 +259,40 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('❌ Dashboard API error:', error);
     
-    // Fallback to mock data if real data fails
-    const mockDashboardData = {
+    // Return empty data instead of mock data
+    const emptyDashboardData = {
       stats: {
-        totalRevenue: 245231,
-        totalOrders: 1234,
-        productsSold: 892,
-        newCustomers: 156,
-        pendingOrders: 24,
-        lowStockProducts: 8
+        totalRevenue: 0,
+        totalOrders: 0,
+        productsSold: 0,
+        newCustomers: 0,
+        pendingOrders: 0,
+        lowStockProducts: 0
       },
       performanceMetrics: {
-        conversionRate: 3.2,
-        averageOrderValue: 2450,
-        customerSatisfaction: 4.8
+        conversionRate: 0,
+        averageOrderValue: 0,
+        customerSatisfaction: 0
       },
-      recentActivity: [
-        {
-          id: "1",
-          type: "order" as const,
-          message: "New order #ORD-0012 received",
-          time: "5 minutes ago",
-          amount: 4250,
-          status: "success" as const
-        },
-        {
-          id: "2",
-          type: "product" as const,
-          message: "Product 'Organic Soap' is low in stock",
-          time: "1 hour ago",
-          amount: null,
-          status: "warning" as const
-        }
-      ],
-      topProducts: [
-        { name: "Organic Lavender Soap", sales: 45, revenue: 67500 },
-        { name: "Bamboo Toothbrush Set", sales: 32, revenue: 25600 },
-        { name: "Natural Deodorant", sales: 28, revenue: 22400 },
-        { name: "Reusable Coffee Cup", sales: 21, revenue: 31500 }
-      ],
+      recentActivity: [],
+      topProducts: [],
       salesData: [
-        { day: "Mon", sales: 12, revenue: 18500 },
-        { day: "Tue", sales: 18, revenue: 26700 },
-        { day: "Wed", sales: 15, revenue: 22500 },
-        { day: "Thu", sales: 22, revenue: 34100 },
-        { day: "Fri", sales: 25, revenue: 41200 },
-        { day: "Sat", sales: 30, revenue: 49500 },
-        { day: "Sun", sales: 24, revenue: 37800 }
+        { day: "Mon", sales: 0, revenue: 0 },
+        { day: "Tue", sales: 0, revenue: 0 },
+        { day: "Wed", sales: 0, revenue: 0 },
+        { day: "Thu", sales: 0, revenue: 0 },
+        { day: "Fri", sales: 0, revenue: 0 },
+        { day: "Sat", sales: 0, revenue: 0 },
+        { day: "Sun", sales: 0, revenue: 0 }
       ],
-      dataSource: 'mock', // Flag to indicate mock data
+      dataSource: 'empty', // Flag to indicate empty data
       lastUpdated: new Date().toISOString()
     };
 
     return NextResponse.json({ 
-      data: mockDashboardData,
+      data: emptyDashboardData,
       success: false,
-      message: 'Using mock data - real data unavailable',
+      message: 'No data available - backend error',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
@@ -338,7 +303,8 @@ export async function POST(request: NextRequest) {
     // Check authentication
     const vendor = await authenticateVendor(request);
     if (!vendor) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.log('❌ No authenticated vendor found - returning 401');
+      return createUnauthorizedResponse();
     }
 
     // Refresh data (same as GET but with refresh flag)

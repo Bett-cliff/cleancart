@@ -111,7 +111,7 @@ export default function AddProductPage() {
 
   // Get vendor ID from vendor auth context
   const getVendorId = () => {
-    const storedVendor = localStorage.getItem('vendor');
+    const storedVendor = localStorage.getItem('vendor_data');
     if (storedVendor) {
       try {
         const vendorData = JSON.parse(storedVendor);
@@ -121,8 +121,8 @@ export default function AddProductPage() {
       }
     }
     
-    // Fallback to demo vendor ID from your login logs
-    return '68efb302ffa9682bb4a9bf81';
+    // No fallback - require proper authentication
+    return null;
   }
 
   const handleInputChange = (field: string, value: string | boolean | any) => {

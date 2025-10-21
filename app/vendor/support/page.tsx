@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -120,8 +120,9 @@ const vendorSections = [
   }
 ]
 
-// Mock support data
-const supportData = {
+// Empty support data - will be populated from API
+// Empty support data structure
+const emptySupportData = {
   tickets: [
     {
       id: "TKT-0012",
@@ -231,12 +232,60 @@ export default function SupportPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [selectedPriority, setSelectedPriority] = useState("all")
+  const [supportData, setSupportData] = useState(emptySupportData)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const tabs = [
     { id: "tickets", label: "Support Tickets" },
     { id: "knowledge", label: "Knowledge Base" },
     { id: "resources", label: "Resources" }
   ]
+
+  // Fetch support data
+  useEffect(() => {
+    const fetchSupportData = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        // Get vendor token for authentication
+        const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+        
+        if (!token) {
+          setError('No authentication token found')
+          setSupportData(emptySupportData)
+          return
+        }
+
+        const response = await fetch('/api/vendor/support', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch support data')
+        }
+
+        const result = await response.json()
+        if (result.success && result.data) {
+          setSupportData(result.data)
+        } else {
+          setSupportData(emptySupportData)
+        }
+      } catch (err) {
+        console.error('Error fetching support data:', err)
+        setError(err instanceof Error ? err.message : 'An error occurred')
+        setSupportData(emptySupportData)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchSupportData()
+  }, [])
 
   const statuses = ["all", "open", "in_progress", "resolved", "closed"]
   const priorities = ["all", "high", "medium", "low"]

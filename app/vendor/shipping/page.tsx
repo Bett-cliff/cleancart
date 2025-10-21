@@ -47,191 +47,38 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
-// Mock shipping data
-const mockShippingData = {
+// Empty shipping data - will be populated from API
+const emptyShippingData = {
   overview: {
-    totalOrders: 156,
-    pendingShipments: 12,
-    inTransit: 8,
-    delivered: 136,
-    deliverySuccessRate: 94.2,
-    averageDeliveryTime: "2.3 days"
+    totalOrders: 0,
+    pendingShipments: 0,
+    inTransit: 0,
+    delivered: 0,
+    deliverySuccessRate: 0,
+    averageDeliveryTime: "0 days"
   },
-  shippingZones: [
-    {
-      id: 1,
-      name: "Nairobi Central",
-      regions: ["Nairobi CBD", "Westlands", "Kilimani", "Karen", "Langata"],
-      deliveryTime: "1-2 days",
-      cost: 200,
-      freeShippingThreshold: 2000,
-      status: "active"
-    },
-    {
-      id: 2,
-      name: "Nairobi Outer",
-      regions: ["Embakasi", "Kasarani", "Ruiru", "Thika", "Juja"],
-      deliveryTime: "2-3 days",
-      cost: 350,
-      freeShippingThreshold: 3000,
-      status: "active"
-    },
-    {
-      id: 3,
-      name: "Coastal Region",
-      regions: ["Mombasa", "Malindi", "Lamu", "Diani"],
-      deliveryTime: "3-5 days",
-      cost: 800,
-      freeShippingThreshold: 5000,
-      status: "active"
-    },
-    {
-      id: 4,
-      name: "Western Kenya",
-      regions: ["Kisumu", "Kakamega", "Bungoma", "Busia"],
-      deliveryTime: "4-6 days",
-      cost: 600,
-      freeShippingThreshold: 4000,
-      status: "inactive"
-    }
-  ],
-  courierPartners: [
-    {
-      id: 1,
-      name: "Sendy",
-      logo: "/sendy-logo.png",
-      deliveryAreas: ["Nairobi", "Mombasa", "Kisumu", "Nakuru"],
-      costPerKg: 150,
-      deliveryTime: "1-3 days",
-      rating: 4.5,
-      status: "active",
-      integration: "connected"
-    },
-    {
-      id: 2,
-      name: "G4S Courier",
-      logo: "/g4s-logo.png",
-      deliveryAreas: ["Nationwide"],
-      costPerKg: 200,
-      deliveryTime: "2-5 days",
-      rating: 4.2,
-      status: "active",
-      integration: "connected"
-    },
-    {
-      id: 3,
-      name: "DHL Kenya",
-      logo: "/dhl-logo.png",
-      deliveryAreas: ["Nationwide", "International"],
-      costPerKg: 500,
-      deliveryTime: "1-4 days",
-      rating: 4.7,
-      status: "active",
-      integration: "pending"
-    },
-    {
-      id: 4,
-      name: "Posta Kenya",
-      logo: "/posta-logo.png",
-      deliveryAreas: ["Nationwide"],
-      costPerKg: 100,
-      deliveryTime: "5-10 days",
-      rating: 3.8,
-      status: "inactive",
-      integration: "not-connected"
-    }
-  ],
-  pendingShipments: [
-    {
-      id: "SH-001",
-      orderId: "ORD-4567",
-      customer: "John Kamau",
-      destination: "Nairobi CBD",
-      courier: "Sendy",
-      status: "pending",
-      items: 2,
-      totalWeight: 2.5,
-      shippingCost: 200,
-      estimatedDelivery: "2024-06-16",
-      createdAt: "2024-06-14"
-    },
-    {
-      id: "SH-002",
-      orderId: "ORD-4568",
-      customer: "Mary Wanjiku",
-      destination: "Kilimani",
-      courier: "Sendy",
-      status: "pending",
-      items: 1,
-      totalWeight: 1.2,
-      shippingCost: 200,
-      estimatedDelivery: "2024-06-16",
-      createdAt: "2024-06-14"
-    },
-    {
-      id: "SH-003",
-      orderId: "ORD-4569",
-      customer: "David Ochieng",
-      destination: "Mombasa",
-      courier: "G4S Courier",
-      status: "pending",
-      items: 3,
-      totalWeight: 4.1,
-      shippingCost: 800,
-      estimatedDelivery: "2024-06-18",
-      createdAt: "2024-06-14"
-    }
-  ],
-  inTransitShipments: [
-    {
-      id: "SH-004",
-      orderId: "ORD-4564",
-      customer: "Sarah Mwangi",
-      destination: "Westlands",
-      courier: "Sendy",
-      status: "in-transit",
-      items: 1,
-      totalWeight: 1.8,
-      shippingCost: 200,
-      estimatedDelivery: "2024-06-15",
-      currentLocation: "Sorting Facility",
-      trackingNumber: "TRK78901234",
-      createdAt: "2024-06-13"
-    },
-    {
-      id: "SH-005",
-      orderId: "ORD-4565",
-      customer: "James Mutiso",
-      destination: "Ruiru",
-      courier: "G4S Courier",
-      status: "in-transit",
-      items: 2,
-      totalWeight: 3.2,
-      shippingCost: 350,
-      estimatedDelivery: "2024-06-16",
-      currentLocation: "In Transit to Hub",
-      trackingNumber: "TRK78901235",
-      createdAt: "2024-06-13"
-    }
-  ],
+  shippingZones: [],
+  courierPartners: [],
+  pendingShipments: [],
+  inTransitShipments: [],
   deliverySettings: {
     packaging: {
-      boxSizes: ["Small", "Medium", "Large", "Custom"],
+      boxSizes: [],
       defaultPackage: "Medium",
-      fragileHandling: true,
-      insurance: true
+      fragileHandling: false,
+      insurance: false
     },
     notifications: {
-      emailUpdates: true,
+      emailUpdates: false,
       smsUpdates: false,
-      customerNotifications: true,
-      lowStockAlerts: true
+      customerNotifications: false,
+      lowStockAlerts: false
     },
     returns: {
-      returnPolicy: "30 days",
+      returnPolicy: "0 days",
       returnShipping: "customer-pays",
-      inspectionPeriod: "2 days",
-      restockingFee: 10
+      inspectionPeriod: "0 days",
+      restockingFee: 0
     }
   }
 }
@@ -326,7 +173,7 @@ const vendorSections = [
 
 export default function VendorShippingPage() {
   const { toast } = useToast()
-  const [shippingData, setShippingData] = useState(mockShippingData)
+  const [shippingData, setShippingData] = useState(emptyShippingData)
   const [activeTab, setActiveTab] = useState("overview")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("all")

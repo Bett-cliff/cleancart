@@ -13,6 +13,7 @@ import productRoutes from "./routes/products";
 import cartRoutes from "./routes/cart";
 import orderRoutes from "./routes/orders";
 import customerOrdersRoutes from "./routes/customerOrders";
+import vendorRoutes from "./routes/vendors"; // ADD THIS LINE
 
 dotenv.config();
 
@@ -54,6 +55,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/customer-orders", customerOrdersRoutes);
+app.use("/api/vendors", vendorRoutes); // ADD THIS LINE
 
 // Basic route
 app.get("/", (req, res) => {
@@ -66,6 +68,7 @@ app.get("/", (req, res) => {
       cart: "/api/cart/:userId",
       orders: "/api/orders, /api/orders/customer/:customerId, /api/orders/vendor/:vendorId",
       customerOrders: "/api/customer-orders/customer/:customerId, /api/customer-orders/vendor/:vendorId",
+      vendors: "/api/vendors, /api/vendors/:id", // ADD THIS LINE
       upload: "/api/upload (base64 recommended for development)",
       health: "/api/health"
     }
@@ -90,6 +93,7 @@ app.listen(PORT, () => {
   console.log(`🛒 Cart routes: http://localhost:${PORT}/api/cart`);
   console.log(`📦 Order routes: http://localhost:${PORT}/api/orders`);
   console.log(`👤 Customer Orders: http://localhost:${PORT}/api/customer-orders`);
+  console.log(`🏪 Vendor routes: http://localhost:${PORT}/api/vendors`); // ADD THIS LINE
   console.log(`📁 Upload endpoint: http://localhost:${PORT}/api/upload`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
 });

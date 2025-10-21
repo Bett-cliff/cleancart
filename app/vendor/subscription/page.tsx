@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -121,141 +121,87 @@ const vendorSections = [
   }
 ]
 
-// Mock subscription data
-const subscriptionData = {
+// Empty subscription data structure
+const emptySubscriptionData = {
   currentPlan: {
-    name: "Pro Plan",
-    price: 2999,
+    name: "Basic Plan",
+    price: 0,
     billingCycle: "monthly",
     status: "active",
-    nextBillingDate: "2024-02-20",
-    features: [
-      "Up to 100 products",
-      "Advanced analytics",
-      "Priority support",
-      "Custom domain",
-      "API access"
-    ],
-    limits: {
-      products: 100,
-      storage: 10, // GB
-      staffAccounts: 3
-    },
-    usage: {
-      products: 24,
-      storage: 2.3,
-      staffAccounts: 1
+    features: {
+      products: 10,
+      orders: 100,
+      customers: 500,
+      storage: "1GB",
+      support: "email"
     }
   },
-  plans: [
-    {
-      id: "starter",
-      name: "Starter",
-      price: 999,
-      billingCycle: "monthly",
-      popular: false,
-      description: "Perfect for small businesses starting out",
-      features: [
-        "Up to 25 products",
-        "Basic analytics",
-        "Email support",
-        "Standard features"
-      ],
-      limits: {
-        products: 25,
-        storage: 2,
-        staffAccounts: 1
-      }
-    },
-    {
-      id: "pro",
-      name: "Pro",
-      price: 2999,
-      billingCycle: "monthly",
-      popular: true,
-      description: "Ideal for growing businesses",
-      features: [
-        "Up to 100 products",
-        "Advanced analytics",
-        "Priority support",
-        "Custom domain",
-        "API access"
-      ],
-      limits: {
-        products: 100,
-        storage: 10,
-        staffAccounts: 3
-      }
-    },
-    {
-      id: "enterprise",
-      name: "Enterprise",
-      price: 7999,
-      billingCycle: "monthly",
-      popular: false,
-      description: "For large-scale operations",
-      features: [
-        "Unlimited products",
-        "Advanced analytics +",
-        "24/7 phone support",
-        "Multiple custom domains",
-        "Advanced API access",
-        "Custom integrations"
-      ],
-      limits: {
-        products: 999,
-        storage: 50,
-        staffAccounts: 10
-      }
-    }
-  ],
-  billingHistory: [
-    {
-      id: "INV-0012",
-      date: "2024-01-20",
-      amount: 2999,
-      status: "paid",
-      description: "Pro Plan - Monthly"
-    },
-    {
-      id: "INV-0011",
-      date: "2023-12-20",
-      amount: 2999,
-      status: "paid",
-      description: "Pro Plan - Monthly"
-    },
-    {
-      id: "INV-0010",
-      date: "2023-11-20",
-      amount: 2999,
-      status: "paid",
-      description: "Pro Plan - Monthly"
-    },
-    {
-      id: "INV-0009",
-      date: "2023-10-20",
-      amount: 999,
-      status: "paid",
-      description: "Starter Plan - Monthly"
-    }
-  ],
-  paymentMethod: {
-    type: "mpesa",
-    lastFour: "2547",
-    expiry: "12/2025",
-    isDefault: true
-  }
+  usage: {
+    products: { used: 0, limit: 10, percentage: 0 },
+    orders: { used: 0, limit: 100, percentage: 0 },
+    customers: { used: 0, limit: 500, percentage: 0 }
+  },
+  billingHistory: [],
+  plans: []
 }
 
 export default function SubscriptionPage() {
   const [activeTab, setActiveTab] = useState("overview")
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [subscriptionData, setSubscriptionData] = useState(emptySubscriptionData)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const tabs = [
     { id: "overview", label: "Plan Overview" },
     { id: "billing", label: "Billing History" },
     { id: "payment", label: "Payment Methods" }
   ]
+
+  // Fetch subscription data
+  useEffect(() => {
+    const fetchSubscriptionData = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        // Get vendor token for authentication
+        const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+        
+        if (!token) {
+          setError('No authentication token found')
+          setSubscriptionData(emptySubscriptionData)
+          return
+        }
+
+        const response = await fetch('/api/vendor/subscription', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch subscription data')
+        }
+
+        const result = await response.json()
+        if (result.success && result.data) {
+          setSubscriptionData(result.data)
+        } else {
+          setSubscriptionData(emptySubscriptionData)
+        }
+      } catch (err) {
+        console.error('Error fetching subscription data:', err)
+        setError(err instanceof Error ? err.message : 'An error occurred')
+        setSubscriptionData(emptySubscriptionData)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchSubscriptionData()
+  }, [])
 
   const formatCurrency = (amount: number) => {
     return `KSh ${amount.toLocaleString()}`

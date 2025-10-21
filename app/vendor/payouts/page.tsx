@@ -35,93 +35,25 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
-// Mock payout data
-const mockPayoutData = {
+// Empty payout data structure
+const emptyPayoutData = {
   overview: {
-    balance: 45250,
-    pending: 12800,
-    totalEarnings: 245800,
-    thisMonth: 67800,
-    lastMonth: 58900,
-    commissionRate: 8.5
+    balance: 0,
+    pending: 0,
+    totalEarnings: 0,
+    thisMonth: 0,
+    lastMonth: 0,
+    commissionRate: 0
   },
-  transactions: [
-    {
-      id: 'TXN-001',
-      type: 'payout',
-      amount: 25000,
-      status: 'completed',
-      method: 'mpesa',
-      date: '2024-06-15T10:30:00Z',
-      description: 'Weekly payout',
-      reference: 'MPESA-789456'
-    },
-    {
-      id: 'TXN-002',
-      type: 'sale',
-      amount: 45000,
-      status: 'completed',
-      method: 'mpesa',
-      date: '2024-06-14T14:20:00Z',
-      description: 'Pressure Washer Sale',
-      reference: 'ORD-002'
-    },
-    {
-      id: 'TXN-003',
-      type: 'sale',
-      amount: 2450,
-      status: 'completed',
-      method: 'card',
-      date: '2024-06-14T10:15:00Z',
-      description: 'Cleaning Products Sale',
-      reference: 'ORD-001'
-    },
-    {
-      id: 'TXN-004',
-      type: 'payout',
-      amount: 32000,
-      status: 'processing',
-      method: 'mpesa',
-      date: '2024-06-10T09:00:00Z',
-      description: 'Weekly payout',
-      reference: 'MPESA-123456'
-    },
-    {
-      id: 'TXN-005',
-      type: 'sale',
-      amount: 3500,
-      status: 'completed',
-      method: 'mpesa',
-      date: '2024-06-08T16:45:00Z',
-      description: 'Glass Cleaner Sale',
-      reference: 'ORD-003'
-    },
-    {
-      id: 'TXN-006',
-      type: 'refund',
-      amount: -850,
-      status: 'completed',
-      method: 'mpesa',
-      date: '2024-06-07T11:20:00Z',
-      description: 'Order Refund',
-      reference: 'REF-001'
-    }
-  ],
+  transactions: [],
   payoutSchedule: {
     frequency: 'weekly',
-    nextPayout: '2024-06-22',
+    nextPayout: null,
     minimumPayout: 1000,
     method: 'mpesa',
-    mpesaTill: '123456'
+    mpesaTill: null
   },
-  earningsChart: [
-    { month: 'Jan', earnings: 45000, payouts: 40000 },
-    { month: 'Feb', earnings: 52000, payouts: 48000 },
-    { month: 'Mar', earnings: 48000, payouts: 45000 },
-    { month: 'Apr', earnings: 61000, payouts: 58000 },
-    { month: 'May', earnings: 58000, payouts: 52000 },
-    { month: 'Jun', earnings: 67800, payouts: 57000 },
-  ]
+  earningsChart: []
 }
 
 // All the vendor sections for the sub-navbar
@@ -251,7 +183,7 @@ const StockProgress = ({ stock, lowStockThreshold = 10 }: { stock: number; lowSt
 
 export default function VendorPayoutsPage() {
   const { toast } = useToast()
-  const [payoutData, setPayoutData] = useState(mockPayoutData)
+  const [payoutData, setPayoutData] = useState(emptyPayoutData)
   const [timeRange, setTimeRange] = useState('30d')
   const [isRequestingPayout, setIsRequestingPayout] = useState(false)
 

@@ -201,7 +201,15 @@ export default function OrdersPage() {
         if (selectedStatus !== 'all') params.append('status', selectedStatus)
         if (selectedPaymentStatus !== 'all') params.append('paymentStatus', selectedPaymentStatus)
 
-        const response = await fetch(`/api/vendor/orders?${params}`)
+        // Get vendor token for authentication
+        const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+        
+        const response = await fetch(`/api/vendor/orders?${params}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` })
+          }
+        })
         
         if (!response.ok) {
           throw new Error('Failed to fetch orders')
@@ -236,7 +244,15 @@ export default function OrdersPage() {
       if (selectedStatus !== 'all') params.append('status', selectedStatus)
       if (selectedPaymentStatus !== 'all') params.append('paymentStatus', selectedPaymentStatus)
 
-      const response = await fetch(`/api/vendor/orders/export?${params}`)
+      // Get vendor token for authentication
+      const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+      
+      const response = await fetch(`/api/vendor/orders/export?${params}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        }
+      })
       
       if (!response.ok) {
         throw new Error('Failed to export orders')
@@ -266,7 +282,15 @@ export default function OrdersPage() {
       if (selectedStatus !== 'all') params.append('status', selectedStatus)
       if (selectedPaymentStatus !== 'all') params.append('paymentStatus', selectedPaymentStatus)
 
-      const response = await fetch(`/api/vendor/orders?${params}&refresh=true`)
+      // Get vendor token for authentication
+      const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+      
+      const response = await fetch(`/api/vendor/orders?${params}&refresh=true`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        }
+      })
       
       if (!response.ok) {
         throw new Error('Failed to refresh orders')
@@ -307,10 +331,14 @@ export default function OrdersPage() {
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     try {
+      // Get vendor token for authentication
+      const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+      
       const response = await fetch('/api/vendor/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify({
           action: 'updateStatus',
@@ -335,10 +363,14 @@ export default function OrdersPage() {
     if (!confirm('Are you sure you want to cancel this order?')) return
 
     try {
+      // Get vendor token for authentication
+      const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+      
       const response = await fetch('/api/vendor/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify({
           action: 'cancel',

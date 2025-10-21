@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getVendorFromToken, createUnauthorizedResponse } from '@/lib/vendor-auth-utils';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get vendor ID from authentication (for now using demo vendor ID from your working pages)
-    const vendorId = '68efb302ffa9682bb4a9bf81'; // Same vendor ID used in your working add product page
+    console.log('🚀 Vendor Products API - Starting request');
+    
+    // Get the authenticated vendor from the token
+    const vendor = await getVendorFromToken(request);
+    
+    if (!vendor) {
+      console.log('❌ No authenticated vendor found - returning 401');
+      return createUnauthorizedResponse();
+    }
+
+    const vendorId = vendor.id;
+    console.log(`👤 Authenticated vendor: ${vendor.businessName} (${vendorId})`);
 
     // Get query parameters
     const { searchParams } = new URL(request.url);

@@ -223,7 +223,7 @@ const useVendorId = () => {
       
       // Try to get from vendor auth context first
       try {
-        const storedVendor = localStorage.getItem('vendor');
+        const storedVendor = localStorage.getItem('vendor_data');
         console.log('📦 localStorage vendor:', storedVendor);
         
         if (storedVendor) {
@@ -242,7 +242,7 @@ const useVendorId = () => {
 
       // Try to get from session storage
       try {
-        const sessionVendor = sessionStorage.getItem('vendor');
+        const sessionVendor = sessionStorage.getItem('vendor_data');
         console.log('📦 sessionStorage vendor:', sessionVendor);
         
         if (sessionVendor) {
@@ -256,9 +256,9 @@ const useVendorId = () => {
       } catch (error) {
         console.error('❌ Error getting vendor from sessionStorage:', error);
       }
-
-      console.log('⚠️ Using fallback vendor ID from login logs');
-      return '68efb302ffa9682bb4a9bf81';
+      
+      console.warn('⚠️ No vendor ID found in storage');
+      return null;
     };
 
     setVendorId(getVendorId());
@@ -535,10 +535,15 @@ export default function ProductsPage() {
         if (advancedFilters.ecoFriendly !== 'all') params.append('ecoFriendly', advancedFilters.ecoFriendly)
         if (advancedFilters.featured !== 'all') params.append('featured', advancedFilters.featured)
 
-        const apiUrl = `${API_BASE}/api/products/vendor/${vendorId}?${params}`
+        // Use Next.js API route that derives vendorId from the auth token
+        const apiUrl = `/api/vendor/products?${params}`
         console.log('🌐 API URL:', apiUrl)
 
-        const response = await fetchWithRetry(apiUrl)
+        // Attach auth token from localStorage
+        const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+        const response = await fetchWithRetry(apiUrl, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        })
         
         if (!response.ok) {
           const errorText = await response.text()

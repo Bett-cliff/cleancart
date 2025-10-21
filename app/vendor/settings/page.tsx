@@ -126,7 +126,7 @@ const vendorSections = [
   }
 ]
 
-// Mock settings data
+// Empty settings data - will be populated from API
 const settingsData = {
   profile: {
     businessName: "CleanCart Vendor Store",

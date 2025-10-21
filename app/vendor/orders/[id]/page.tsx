@@ -82,7 +82,15 @@ export default function OrderDetailsPage() {
     const fetchOrderDetails = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`/api/vendor/orders/${params.id}`)
+        // Get vendor token for authentication
+        const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+        
+        const response = await fetch(`/api/vendor/orders/${params.id}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` })
+          }
+        })
         
         if (!response.ok) {
           throw new Error('Failed to fetch order details')
@@ -108,10 +116,14 @@ export default function OrderDetailsPage() {
     
     try {
       setUpdating(true)
+      // Get vendor token for authentication
+      const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+      
       const response = await fetch('/api/vendor/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify({
           action: 'updateStatus',

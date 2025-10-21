@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Download } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -122,96 +122,75 @@ const vendorSections = [
   }
 ]
 
-// Mock reviews data
-const reviewsData = {
+// Empty reviews data structure
+const emptyReviewsData = {
   summary: {
-    averageRating: 4.6,
-    totalReviews: 128,
-    fiveStar: 89,
-    fourStar: 25,
-    threeStar: 8,
-    twoStar: 4,
-    oneStar: 2
+    averageRating: 0,
+    totalReviews: 0,
+    fiveStar: 0,
+    fourStar: 0,
+    threeStar: 0,
+    twoStar: 0,
+    oneStar: 0
   },
-  reviews: [
-    {
-      id: 1,
-      customer: {
-        name: "Sarah Johnson",
-        avatar: "/api/placeholder/40/40"
-      },
-      product: {
-        name: "Organic Lavender Soap",
-        image: "/api/placeholder/60/60"
-      },
-      rating: 5,
-      title: "Amazing product!",
-      comment: "This soap is absolutely wonderful. The lavender scent is calming and it leaves my skin feeling soft and moisturized. Will definitely purchase again!",
-      date: "2024-01-20",
-      status: "published",
-      helpful: 12
-    },
-    {
-      id: 2,
-      customer: {
-        name: "Mike Otieno",
-        avatar: "/api/placeholder/40/40"
-      },
-      product: {
-        name: "Bamboo Toothbrush Set",
-        image: "/api/placeholder/60/60"
-      },
-      rating: 4,
-      title: "Good quality",
-      comment: "The toothbrushes are eco-friendly and work well. The bristles are soft but effective. Packaging could be improved though.",
-      date: "2024-01-19",
-      status: "published",
-      helpful: 8
-    },
-    {
-      id: 3,
-      customer: {
-        name: "Grace Wambui",
-        avatar: "/api/placeholder/40/40"
-      },
-      product: {
-        name: "Natural Deodorant",
-        image: "/api/placeholder/60/60"
-      },
-      rating: 2,
-      title: "Not for me",
-      comment: "Didn't work well for my body chemistry. Started developing irritation after a few days of use. Customer service was helpful with the return though.",
-      date: "2024-01-18",
-      status: "pending",
-      helpful: 3
-    },
-    {
-      id: 4,
-      customer: {
-        name: "David Kimani",
-        avatar: "/api/placeholder/40/40"
-      },
-      product: {
-        name: "Reusable Coffee Cup",
-        image: "/api/placeholder/60/60"
-      },
-      rating: 5,
-      title: "Perfect for daily use",
-      comment: "Love this cup! Keeps my coffee hot for hours and doesn't leak. The lid is secure and easy to clean. Highly recommend!",
-      date: "2024-01-17",
-      status: "published",
-      helpful: 15
-    }
-  ]
+  reviews: []
 }
 
 export default function ReviewsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [selectedRating, setSelectedRating] = useState("all")
+  const [reviewsData, setReviewsData] = useState(emptyReviewsData)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const statuses = ["all", "published", "pending", "hidden"]
   const ratings = ["all", "5", "4", "3", "2", "1"]
+
+  // Fetch reviews data
+  useEffect(() => {
+    const fetchReviewsData = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        // Get vendor token for authentication
+        const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+        
+        if (!token) {
+          setError('No authentication token found')
+          setReviewsData(emptyReviewsData)
+          return
+        }
+
+        const response = await fetch('/api/vendor/reviews', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch reviews data')
+        }
+
+        const result = await response.json()
+        if (result.success && result.data) {
+          setReviewsData(result.data)
+        } else {
+          setReviewsData(emptyReviewsData)
+        }
+      } catch (err) {
+        console.error('Error fetching reviews data:', err)
+        setError(err instanceof Error ? err.message : 'An error occurred')
+        setReviewsData(emptyReviewsData)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchReviewsData()
+  }, [])
 
   const filteredReviews = reviewsData.reviews.filter(review => {
     const matchesSearch = review.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -1,43 +1,43 @@
 // app/api/vendor/dashboard/sales/route.ts
 import { NextRequest, NextResponse } from 'next/server'
+import { getVendorFromToken, createUnauthorizedResponse } from '@/lib/vendor-auth-utils'
 
-const mockSalesData = [
-  { day: "Mon", sales: 12, revenue: 18500 },
-  { day: "Tue", sales: 18, revenue: 26700 },
-  { day: "Wed", sales: 15, revenue: 22500 },
-  { day: "Thu", sales: 22, revenue: 34100 },
-  { day: "Fri", sales: 25, revenue: 41200 },
-  { day: "Sat", sales: 30, revenue: 49500 },
-  { day: "Sun", sales: 24, revenue: 37800 }
+const emptySalesData = [
+  { day: "Mon", sales: 0, revenue: 0 },
+  { day: "Tue", sales: 0, revenue: 0 },
+  { day: "Wed", sales: 0, revenue: 0 },
+  { day: "Thu", sales: 0, revenue: 0 },
+  { day: "Fri", sales: 0, revenue: 0 },
+  { day: "Sat", sales: 0, revenue: 0 },
+  { day: "Sun", sales: 0, revenue: 0 }
 ]
 
 async function authenticateVendor(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  const token = authHeader?.replace('Bearer ', '')
-  
-  if (!token) return null
-  
-  try {
-    const vendor = { id: '1', name: 'Demo Vendor', storeId: 'store-123' }
-    return vendor
-  } catch (error) {
-    return null
+  const vendor = await getVendorFromToken(request);
+  if (!vendor) {
+    return null;
   }
+  return {
+    id: vendor.id,
+    name: vendor.businessName,
+    storeId: vendor.id
+  };
 }
 
 export async function GET(request: NextRequest) {
   try {
     const vendor = await authenticateVendor(request)
     if (!vendor) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      console.log('❌ No authenticated vendor found - returning 401');
+      return createUnauthorizedResponse();
     }
 
     const { searchParams } = new URL(request.url)
     const range = searchParams.get('range') || '7d'
 
     // In production, you'd filter data based on the range
-    // For now, return the weekly data
-    return NextResponse.json(mockSalesData)
+    // For now, return empty data since vendor has no orders
+    return NextResponse.json(emptySalesData)
 
   } catch (error) {
     console.error('Sales API error:', error)

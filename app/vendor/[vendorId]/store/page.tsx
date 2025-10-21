@@ -21,136 +21,45 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-// Mock data - replace with actual API calls
-const mockVendorData = {
+// Empty vendor data - will be populated from API
+const emptyVendorData = {
   "eco-friendly-store": {
     id: "eco-friendly-store",
-    name: "EcoFriendly Store",
-    description: "Your one-stop shop for sustainable living products. We believe in making eco-friendly choices accessible to everyone.",
+    name: "Loading...",
+    description: "Loading vendor information...",
     avatar: "/api/placeholder/100/100",
     coverImage: "/api/placeholder/1200/400",
-    rating: 4.8,
-    reviewCount: 127,
-    joinedDate: "2023-01-15",
-    location: "Nairobi, Kenya",
-    totalProducts: 45,
-    categories: ["Bath & Body", "Home & Kitchen", "Personal Care", "Zero Waste"],
+    rating: 0,
+    reviewCount: 0,
+    joinedDate: "",
+    location: "",
+    totalProducts: 0,
+    categories: [],
     social: {
-      website: "https://ecofriendly.co.ke",
-      instagram: "@ecofriendly_ke"
+      website: "",
+      instagram: ""
     }
   },
   "organic-harvest": {
     id: "organic-harvest",
-    name: "Organic Harvest",
-    description: "Pure, natural organic products straight from Kenyan farms. Supporting local farmers and sustainable agriculture.",
+    name: "Loading...",
+    description: "Loading vendor information...",
     avatar: "/api/placeholder/100/100",
     coverImage: "/api/placeholder/1200/400",
-    rating: 4.9,
-    reviewCount: 89,
-    joinedDate: "2023-03-20",
-    location: "Nakuru, Kenya",
-    totalProducts: 32,
-    categories: ["Food & Beverages", "Skincare", "Herbal Products"],
+    rating: 0,
+    reviewCount: 0,
+    joinedDate: "",
+    location: "",
+    totalProducts: 0,
+    categories: [],
     social: {
-      website: "https://organicharvest.co.ke",
-      instagram: "@organicharvest"
+      website: "",
+      instagram: ""
     }
   }
 }
 
-const mockProducts = [
-  {
-    id: 1,
-    vendorId: "eco-friendly-store",
-    name: "Organic Lavender Soap",
-    description: "Handmade lavender soap with organic ingredients, perfect for sensitive skin.",
-    price: 450,
-    originalPrice: 550,
-    image: "/api/placeholder/300/300",
-    category: "Bath & Body",
-    rating: 4.8,
-    reviewCount: 34,
-    stock: 15,
-    tags: ["Organic", "Handmade", "Vegan"],
-    isFeatured: true
-  },
-  {
-    id: 2,
-    vendorId: "eco-friendly-store",
-    name: "Bamboo Toothbrush Set",
-    description: "Eco-friendly bamboo toothbrushes with charcoal-infused bristles. 4-pack.",
-    price: 800,
-    originalPrice: 1000,
-    image: "/api/placeholder/300/300",
-    category: "Personal Care",
-    rating: 4.6,
-    reviewCount: 28,
-    stock: 22,
-    tags: ["Biodegradable", "Charcoal", "4-pack"],
-    isFeatured: true
-  },
-  {
-    id: 3,
-    vendorId: "eco-friendly-store",
-    name: "Natural Deodorant",
-    description: "Aluminum-free natural deodorant with coconut oil and shea butter.",
-    price: 650,
-    originalPrice: 750,
-    image: "/api/placeholder/300/300",
-    category: "Personal Care",
-    rating: 4.4,
-    reviewCount: 19,
-    stock: 8,
-    tags: ["Natural", "Aluminum-free", "Coconut"],
-    isFeatured: false
-  },
-  {
-    id: 4,
-    vendorId: "eco-friendly-store",
-    name: "Reusable Coffee Cup",
-    description: "Insulated reusable coffee cup made from sustainable materials. Keeps drinks hot for hours.",
-    price: 1200,
-    originalPrice: 1500,
-    image: "/api/placeholder/300/300",
-    category: "Home & Kitchen",
-    rating: 4.9,
-    reviewCount: 42,
-    stock: 30,
-    tags: ["Reusable", "Insulated", "Eco-friendly"],
-    isFeatured: true
-  },
-  {
-    id: 5,
-    vendorId: "eco-friendly-store",
-    name: "Beeswax Food Wraps",
-    description: "Sustainable alternative to plastic wrap. Set of 3 different sizes.",
-    price: 950,
-    originalPrice: 1100,
-    image: "/api/placeholder/300/300",
-    category: "Zero Waste",
-    rating: 4.7,
-    reviewCount: 31,
-    stock: 12,
-    tags: ["Beeswax", "Reusable", "Plastic-free"],
-    isFeatured: false
-  },
-  {
-    id: 6,
-    vendorId: "eco-friendly-store",
-    name: "Organic Cotton Tote Bag",
-    description: "Spacious organic cotton tote bag with unique Kenyan design.",
-    price: 750,
-    originalPrice: 900,
-    image: "/api/placeholder/300/300",
-    category: "Zero Waste",
-    rating: 4.5,
-    reviewCount: 25,
-    stock: 18,
-    tags: ["Organic Cotton", "Reusable", "Local Design"],
-    isFeatured: false
-  }
-]
+const emptyProducts = []
 
 // Product Card Component
 const ProductCard = ({ product }: { product: any }) => {
@@ -373,8 +282,8 @@ export default function VendorStorePage({ params }: { params: { vendorId: string
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [sortBy, setSortBy] = useState("featured")
 
-  const vendor = mockVendorData[params.vendorId as keyof typeof mockVendorData]
-  const vendorProducts = mockProducts.filter(product => product.vendorId === params.vendorId)
+  const vendor = emptyVendorData[params.vendorId as keyof typeof emptyVendorData]
+  const vendorProducts = emptyProducts.filter(product => product.vendorId === params.vendorId)
 
   if (!vendor) {
     return (

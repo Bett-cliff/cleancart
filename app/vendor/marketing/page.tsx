@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,81 +31,11 @@ import {
   Star
 } from "lucide-react"
 
-// Mock marketing data
-const marketingData = {
-  campaigns: [
-    {
-      id: 1,
-      name: "Summer Sale 2024",
-      type: "discount",
-      status: "active",
-      audience: "all_customers",
-      budget: 5000,
-      spent: 3200,
-      impressions: 12500,
-      clicks: 850,
-      conversions: 45,
-      startDate: "2024-01-15",
-      endDate: "2024-02-15"
-    },
-    {
-      id: 2,
-      name: "New Product Launch",
-      type: "email",
-      status: "scheduled",
-      audience: "subscribers",
-      budget: 2000,
-      spent: 0,
-      impressions: 0,
-      clicks: 0,
-      conversions: 0,
-      startDate: "2024-02-01",
-      endDate: "2024-02-28"
-    },
-    {
-      id: 3,
-      name: "Loyalty Rewards",
-      type: "loyalty",
-      status: "completed",
-      audience: "returning_customers",
-      budget: 3000,
-      spent: 2800,
-      impressions: 8900,
-      clicks: 620,
-      conversions: 38,
-      startDate: "2023-12-01",
-      endDate: "2023-12-31"
-    }
-  ],
-  coupons: [
-    {
-      id: 1,
-      code: "SUMMER20",
-      discount: 20,
-      type: "percentage",
-      uses: 45,
-      maxUses: 100,
-      status: "active"
-    },
-    {
-      id: 2,
-      code: "WELCOME10",
-      discount: 10,
-      type: "percentage",
-      uses: 89,
-      maxUses: 200,
-      status: "active"
-    },
-    {
-      id: 3,
-      code: "FREESHIP",
-      discount: 0,
-      type: "shipping",
-      uses: 23,
-      maxUses: 50,
-      status: "active"
-    }
-  ]
+// Empty marketing data structure
+const emptyMarketingData = {
+  campaigns: [],
+  coupons: [],
+  emailCampaigns: []
 }
 
 // All the vendor sections for the sub-navbar
@@ -199,6 +129,9 @@ const vendorSections = [
 export default function MarketingPage() {
   const [activeTab, setActiveTab] = useState("overview")
   const [showCreateCampaign, setShowCreateCampaign] = useState(false)
+  const [marketingData, setMarketingData] = useState(emptyMarketingData)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const tabs = [
     { id: "overview", label: "Overview" },
@@ -216,6 +149,51 @@ export default function MarketingPage() {
     const revenue = conversions * averageOrder
     return ((revenue - spent) / spent) * 100
   }
+
+  // Fetch marketing data
+  useEffect(() => {
+    const fetchMarketingData = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        // Get vendor token for authentication
+        const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+        
+        if (!token) {
+          setError('No authentication token found')
+          setMarketingData(emptyMarketingData)
+          return
+        }
+
+        const response = await fetch('/api/vendor/marketing', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch marketing data')
+        }
+
+        const result = await response.json()
+        if (result.success && result.data) {
+          setMarketingData(result.data)
+        } else {
+          setMarketingData(emptyMarketingData)
+        }
+      } catch (err) {
+        console.error('Error fetching marketing data:', err)
+        setError(err instanceof Error ? err.message : 'An error occurred')
+        setMarketingData(emptyMarketingData)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchMarketingData()
+  }, [])
 
   return (
     <div className="space-y-6">

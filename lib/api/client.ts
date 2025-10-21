@@ -3,7 +3,9 @@ class APIClient {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || '/api';
+    // For Next.js API routes, use relative path
+    // For backend API calls, use the full URL
+    this.baseURL = '/api';
   }
 
   private async request(endpoint: string, options: RequestInit = {}) {

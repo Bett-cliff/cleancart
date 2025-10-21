@@ -253,7 +253,7 @@ export default function InventoryPage() {
     const sources = [
       // 1. Check localStorage
       () => {
-        const storedVendor = localStorage.getItem('vendor');
+        const storedVendor = localStorage.getItem('vendor_data');
         if (storedVendor) {
           try {
             const vendorData = JSON.parse(storedVendor);
@@ -270,7 +270,7 @@ export default function InventoryPage() {
       },
       // 2. Check sessionStorage  
       () => {
-        const sessionVendor = sessionStorage.getItem('vendor');
+        const sessionVendor = sessionStorage.getItem('vendor_data');
         if (sessionVendor) {
           try {
             const vendorData = JSON.parse(sessionVendor);
@@ -301,8 +301,8 @@ export default function InventoryPage() {
       }
     }
 
-    console.warn('⚠️ Using fallback vendor ID from login logs');
-    return '68efb302ffa9682bb4a9bf81'; // Fallback
+    console.warn('⚠️ No vendor ID found in storage');
+    return null; // No fallback to avoid leaking other vendor data
   }
 
   // Calculate inventory stats based on current products
@@ -333,10 +333,15 @@ export default function InventoryPage() {
         throw new Error('Vendor ID not found. Please log in again.')
       }
 
-      const apiUrl = `${API_BASE}/api/products/vendor/${vendorId}`
+      // Use Next.js API route which derives vendorId from token
+      const apiUrl = `/api/vendor/products`
       console.log('🌐 API URL:', apiUrl)
 
-      const response = await fetch(apiUrl)
+      // Attach auth header
+      const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+      const response = await fetch(apiUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      })
       
       if (!response.ok) {
         const errorText = await response.text()

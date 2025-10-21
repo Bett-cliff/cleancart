@@ -195,7 +195,15 @@ export default function CustomersPage() {
         if (selectedStatus !== 'all') params.append('status', selectedStatus)
         if (selectedLoyalty !== 'all') params.append('loyalty', selectedLoyalty)
 
-        const response = await fetch(`/api/vendor/customers?${params}`)
+        // Get vendor token for authentication
+        const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+        
+        const response = await fetch(`/api/vendor/customers?${params}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` })
+          }
+        })
         
         if (!response.ok) {
           throw new Error('Failed to fetch customers')
@@ -245,7 +253,15 @@ export default function CustomersPage() {
     if (selectedStatus !== 'all') params.append('status', selectedStatus)
     if (selectedLoyalty !== 'all') params.append('loyalty', selectedLoyalty)
 
-    fetch(`/api/vendor/customers?${params}`)
+    // Get vendor token for authentication
+    const token = typeof window !== 'undefined' ? localStorage.getItem('vendor_token') : null
+    
+    fetch(`/api/vendor/customers?${params}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` })
+      }
+    })
       .then(response => response.json())
       .then(result => {
         setCustomers(result.data.customers)

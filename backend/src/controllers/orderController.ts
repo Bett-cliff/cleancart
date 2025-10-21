@@ -81,6 +81,112 @@ export const createOrder = async (req: Request, res: Response) => {
   }
 };
 
+// Create marketplace order (from cart checkout)
+export const createMarketplaceOrder = async (req: Request, res: Response) => {
+  try {
+    const {
+      customerId,
+      cartItems,
+      shippingAddress,
+      paymentMethod,
+      notes
+    } = req.body;
+
+    // Validate cart items
+    if (!cartItems || cartItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cart is empty'
+      });
+    }
+
+    // Validate required fields
+    if (!customerId || !shippingAddress || !paymentMethod) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: customerId, shippingAddress, paymentMethod'
+      });
+    }
+
+    // Calculate totals from cart items
+    const subtotal = cartItems.reduce((sum: number, item: any) => 
+      sum + (item.price * item.quantity), 0);
+    const shippingFee = 0; // Could be calculated based on location
+    const taxAmount = subtotal * 0.16; // 16% VAT in Kenya
+    const totalAmount = subtotal + shippingFee + taxAmount;
+
+    // Group items by vendor for vendorOrders
+    const vendorOrdersMap = new Map();
+
+    cartItems.forEach((item: any) => {
+      const vendorId = item.vendorId;
+      if (!vendorOrdersMap.has(vendorId)) {
+        vendorOrdersMap.set(vendorId, {
+          vendorId: new Types.ObjectId(vendorId),
+          items: [],
+          status: 'pending'
+        });
+      }
+      vendorOrdersMap.get(vendorId).items.push({
+        productId: new Types.ObjectId(item.productId || item.id),
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image || '/api/placeholder/200/200',
+        vendorId: new Types.ObjectId(item.vendorId)
+      });
+    });
+
+    const vendorOrders = Array.from(vendorOrdersMap.values());
+
+    // Transform cart items to order items format
+    const orderItems = cartItems.map((item: any) => ({
+      productId: new Types.ObjectId(item.productId || item.id),
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      image: item.image || '/api/placeholder/200/200',
+      vendorId: new Types.ObjectId(item.vendorId)
+    }));
+
+    // Create order
+    const order = new Order({
+      customerId: new Types.ObjectId(customerId),
+      items: orderItems,
+      shippingAddress,
+      paymentMethod,
+      subtotal,
+      shippingFee,
+      taxAmount,
+      totalAmount,
+      vendorOrders,
+      notes: notes || 'Order from CleanCart Marketplace'
+    });
+
+    const savedOrder = await order.save();
+
+    // Populate the saved order with customer and product details
+    const populatedOrder = await Order.findById(savedOrder._id)
+      .populate('customerId', 'name email phone')
+      .populate('items.productId', 'name price images category')
+      .populate('vendorOrders.vendorId', 'businessName email phone location');
+
+    res.status(201).json({
+      success: true,
+      message: 'Marketplace order created successfully',
+      data: populatedOrder
+    });
+
+  } catch (error: any) {
+    console.error('Create marketplace order error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create marketplace order',
+      error: error.message
+    });
+  }
+};
+
 // Get orders for a customer
 export const getCustomerOrders = async (req: Request, res: Response) => {
   try {
@@ -260,6 +366,51 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update order status',
+      error: error.message
+    });
+  }
+};
+
+// Update vendor order status specifically
+export const updateVendorOrderStatus = async (req: Request, res: Response) => {
+  try {
+    const { orderId, vendorId } = req.params;
+    const { status, shippingTracking } = req.body;
+
+    const order = await Order.findOneAndUpdate(
+      {
+        _id: orderId,
+        'vendorOrders.vendorId': vendorId
+      },
+      {
+        $set: {
+          'vendorOrders.$.status': status,
+          'vendorOrders.$.shippingTracking': shippingTracking,
+          'updatedAt': new Date()
+        }
+      },
+      { new: true }
+    ).populate('customerId', 'name email phone')
+     .populate('items.productId', 'name price images')
+     .populate('vendorOrders.vendorId', 'businessName email');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order or vendor order not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Vendor order status updated successfully',
+      data: order
+    });
+  } catch (error: any) {
+    console.error('Update vendor order status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update vendor order status',
       error: error.message
     });
   }

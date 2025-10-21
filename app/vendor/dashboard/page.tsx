@@ -135,7 +135,7 @@ export default function VendorDashboard() {
   const statsData = dashboardData ? [
     {
       title: "Total Revenue",
-      value: formatCurrency(dashboardData.stats.totalRevenue),
+      value: formatCurrency(dashboardData.stats?.totalRevenue || 0),
       change: "+12.5%",
       trend: "up" as const,
       icon: DollarSign,
@@ -146,29 +146,29 @@ export default function VendorDashboard() {
     },
     {
       title: "Total Orders",
-      value: formatNumber(dashboardData.stats.totalOrders),
+      value: formatNumber(dashboardData.stats?.totalOrders || 0),
       change: "+8.2%",
       trend: "up" as const,
       icon: ShoppingCart,
-      description: `${dashboardData.stats.pendingOrders} pending`,
+      description: `${dashboardData.stats?.pendingOrders || 0} pending`,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
       progress: 60
     },
     {
       title: "Products Sold",
-      value: formatNumber(dashboardData.stats.productsSold),
+      value: formatNumber(dashboardData.stats?.productsSold || 0),
       change: "+15.3%",
       trend: "up" as const,
       icon: Package,
-      description: `${dashboardData.stats.lowStockProducts} low stock`,
+      description: `${dashboardData.stats?.lowStockProducts || 0} low stock`,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
       progress: 85
     },
     {
       title: "New Customers",
-      value: formatNumber(dashboardData.stats.newCustomers),
+      value: formatNumber(dashboardData.stats?.newCustomers || 0),
       change: "+22.1%",
       trend: "up" as const,
       icon: Users,
@@ -183,30 +183,30 @@ export default function VendorDashboard() {
   const performanceMetricsData = dashboardData ? [
     { 
       label: "Conversion Rate", 
-      value: `${dashboardData.performanceMetrics.conversionRate}%`, 
+      value: `${dashboardData.performanceMetrics?.conversionRate || 0}%`, 
       change: "+0.5%",
       target: "4.0%",
-      progress: (dashboardData.performanceMetrics.conversionRate / 4.0) * 100,
+      progress: ((dashboardData.performanceMetrics?.conversionRate || 0) / 4.0) * 100,
       icon: Target,
       color: "text-green-600",
       bgColor: "bg-green-50"
     },
     { 
       label: "Avg. Order Value", 
-      value: formatCurrency(dashboardData.performanceMetrics.averageOrderValue), 
+      value: formatCurrency(dashboardData.performanceMetrics?.averageOrderValue || 0), 
       change: "+KSh 120",
       target: "KSh 3,000",
-      progress: (dashboardData.performanceMetrics.averageOrderValue / 3000) * 100,
+      progress: ((dashboardData.performanceMetrics?.averageOrderValue || 0) / 3000) * 100,
       icon: TrendingUp,
       color: "text-blue-600",
       bgColor: "bg-blue-50"
     },
     { 
       label: "Customer Satisfaction", 
-      value: `${dashboardData.performanceMetrics.customerSatisfaction}/5`, 
+      value: `${dashboardData.performanceMetrics?.customerSatisfaction || 0}/5`, 
       change: "+0.2",
       target: "5.0/5",
-      progress: (dashboardData.performanceMetrics.customerSatisfaction / 5) * 100,
+      progress: ((dashboardData.performanceMetrics?.customerSatisfaction || 0) / 5) * 100,
       icon: Star,
       color: "text-yellow-600",
       bgColor: "bg-yellow-50"

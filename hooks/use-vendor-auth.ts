@@ -24,14 +24,21 @@ export function useVendorAuth() {
       // Simple token existence check - no backend call needed
       if (vendorApi.hasToken()) {
         console.log('✅ useVendorAuth: Token exists, user is authenticated')
+        const currentVendor = vendorApi.getCurrentVendor()
+        if (currentVendor) {
+          setVendor(currentVendor)
+          console.log('📊 useVendorAuth: Loaded vendor data from storage:', currentVendor.businessName)
+        }
         setIsAuthenticated(true)
       } else {
         console.log('❌ useVendorAuth: No token found')
         setIsAuthenticated(false)
+        setVendor(null)
       }
     } catch (error) {
       console.log('⚠️ useVendorAuth: Auth check failed:', error)
       setIsAuthenticated(false)
+      setVendor(null)
     } finally {
       setIsLoading(false)
     }
@@ -51,6 +58,7 @@ export function useVendorAuth() {
       if (data.vendor) {
         console.log('📊 useVendorAuth: Using vendor data from login response:', data.vendor.businessName)
         setVendor(data.vendor)
+        vendorApi.setCurrentVendor(data.vendor) // Store vendor data in localStorage
         setIsAuthenticated(true)
         console.log('🎯 useVendorAuth: Auth state updated - isAuthenticated: true')
         return { success: true, vendor: data.vendor }
